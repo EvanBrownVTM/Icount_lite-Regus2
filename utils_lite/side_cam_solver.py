@@ -3,7 +3,9 @@ import cv2
 from collections import defaultdict
 from .utils import get_center, calculate_angle, calculate_average_movement_vector, descale_contour, bbox_area
 import time
-from .configSrc import cls_dict
+import sys
+sys.path.insert(0, '..')
+from configSrc import cls_dict
 
 timestamp_format = "%Y-%m-%d:%H:%M:%S"
 

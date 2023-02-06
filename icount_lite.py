@@ -27,7 +27,7 @@ import numpy as np
 import cv2
 import json
 import pycuda.autoinit  # This is needed for initializing CUDA driver
-import utils_lite.configSrc as cfg
+import configSrc as cfg
 import tensorflow as tf
 import requests
 import traceback
