@@ -604,17 +604,18 @@ while True:
 				writer2.close()
 				init_process = True
 
-			if len(cv_activities) > 0:
-				cv_activities = sorted(cv_activities, key=lambda d: d['timestamp']) 
-			data = {"cmd": "Done", "transid": transid, "timestamp": time.strftime("%Y%m%d-%H_%M_%S"), "cv_activities": cv_activities, "ls_activities": ls_activities}
-			mess = json.dumps(data)
-			channel2.basic_publish(exchange='',
-							routing_key="cvPost",
-							body=mess)
-			if icount_mode:
-				logger.info("Sent cvPost signal (Icount mode)\n")
-			else:
-				logger.info("Sent cvPost signal (Recording-only mode)\n")
+			if (len(cv_activities) > 0) or (len(ls_activities) > 0): #only send signal to postprocess if we have either a cv_activity or a ls_activity
+				if len(cv_activities) > 0:
+					cv_activities = sorted(cv_activities, key=lambda d: d['timestamp']) 
+				data = {"cmd": "Done", "transid": transid, "timestamp": time.strftime("%Y%m%d-%H_%M_%S"), "cv_activities": cv_activities, "ls_activities": ls_activities}
+				mess = json.dumps(data)
+				channel2.basic_publish(exchange='',
+								routing_key="cvPost",
+								body=mess)
+				if icount_mode:
+					logger.info("Sent cvPost signal (Icount mode)\n")
+				else:
+					logger.info("Sent cvPost signal (Recording-only mode)\n")
 
 			door_state = 'initialize'
 			ls_activities = ""
