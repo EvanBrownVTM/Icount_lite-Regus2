@@ -3,10 +3,7 @@ import cv2
 from collections import defaultdict
 from .utils import get_center, calculate_angle, calculate_average_movement_vector, descale_contour, bbox_area
 import time
-<<<<<<< HEAD
 from .configSrc import cls_dict
-=======
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 
 timestamp_format = "%Y-%m-%d:%H:%M:%S"
 class Product():
@@ -236,19 +233,11 @@ class FrontCam:
 					v_flag = 1
 			if v_flag == 0:
 				action = 'NO ACTION'
-<<<<<<< HEAD
 
 		if action == 'RETURN':
 			if product._active_zone not in self._shelves_priority:
 				action = 'NO ACTION'
 
-=======
-		
-		if action == 'RETURN':
-			if product._active_zone not in self._shelves_priority:
-				action = 'NO ACTION'
-				
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 		if not action == 'NO ACTION':
 			product._hand_hist = []
 			product._prod_hist = []
@@ -256,12 +245,8 @@ class FrontCam:
 			product._last_hand_idxs = []
 			product._last_hand_before_hist = []
 		if action != 'NO ACTION' and not idle:
-<<<<<<< HEAD
 			#logger.info('      {} - {} - {} {}'.format(self._cam_id, product._active_zone, action, int(class_id))) #removing action for better tracking
 			logger.info('      {} - {} {} / {}'.format(self._cam_id, action, int(class_id), cls_dict[class_id]))
-=======
-			logger.info('      {} - {} - {} {}'.format(self._cam_id, product._active_zone, action, int(class_id)))
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 			cv_activities.append({"class_id":int(class_id), "action":action, "timestamp": time.strftime(timestamp_format), "active_zone": product._active_zone})
 			if action == 'PICK':
 				self.cart[int(class_id)] += 1
@@ -269,8 +254,3 @@ class FrontCam:
 			else:
 				self.cart[int(class_id)] -= 1
 				cv_ret_cam.append((int(class_id), 'RETURN', cv_activities[-1]['timestamp'], cv_activities[-1]['active_zone']))
-<<<<<<< HEAD
-
-=======
-			
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
