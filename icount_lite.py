@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 ############################################
 '''
 Date: Nov 29, 2022
@@ -20,10 +19,6 @@ import sys
 sys.path.append("/usr/lib/python3.6/site-packages/")
 sys.path.append("/usr/local/cuda-10.2/bin")
 sys.path.append("/usr/local/cuda-10.2/lib64")
-=======
-import os
-import sys
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 import time
 import logging
 import pika
@@ -32,16 +27,10 @@ import numpy as np
 import cv2
 import json
 import pycuda.autoinit  # This is needed for initializing CUDA driver
-<<<<<<< HEAD
 import utils_lite.configSrc as cfg
 import tensorflow as tf
 import requests
 import traceback
-=======
-import configSrc as cfg
-import tensorflow as tf
-import requests
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 
 from pypylon import pylon
 from collections import deque, Counter, defaultdict
@@ -51,27 +40,18 @@ from utils.visualization_ic import BBoxVisualization
 from utils_lite.tracker import AVT
 from utils_lite.front_cam_solver import FrontCam
 from utils_lite.side_cam_solver import SideCam
-<<<<<<< HEAD
-=======
-from  utils_lite.utils import descale_contour
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 from datetime import datetime
 from scipy.optimize import linear_sum_assignment
 
 logging.getLogger("pika").setLevel(logging.WARNING)
 logging.getLogger('requests').setLevel(logging.WARNING)
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
-<<<<<<< HEAD
 logging.basicConfig(filename='{}logs/Icount.log'.format(cfg.log_path), level=logging.DEBUG, format="%(asctime)-8s %(levelname)-8s %(message)s")
-=======
-logging.basicConfig(filename=cfg.log_path, level=logging.DEBUG, format="%(asctime)-8s %(levelname)-8s %(message)s")
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 logging.disable(logging.DEBUG)
 logger=logging.getLogger()
 logger.info("")
 sys.stderr.write=logger.error
 
-<<<<<<< HEAD
 #Setting
 archive_flag = cfg.archive_flag
 maxCamerasToUse = cfg.maxCamerasToUse
@@ -89,29 +69,6 @@ conf_th = 0.7
 cls_dict = cfg.cls_dict
 clear_flag = 0
 
-=======
-init_process = True
-timestamp_format = "%Y%m%d-%H_%M_%S"
-archive_flag = cfg.archive_flag
-fps = 0.0
-conf_th = 0.7
-maxCamerasToUse = 3
-frame_size = 416
-cls_dict = cfg.cls_dict
-l_mask = np.load('contours/lowest_shelf_mask.npy')
-l_mask = np.int32(l_mask * frame_size)
-save_size = 200
-display_mode = cfg.display_mode
-icount_mode = cfg.icount_mode
-pika_flag = True
-tsv_url = 'http://192.168.1.140:8085/tsv/flashapi'
-
-
-def draw_contours(img, contours, frame_size):
-							for zone in contours.files:
-								absolute_zone = np.int32(contours[zone] * frame_size) #denormalize the contour
-								cv2.drawContours(img, absolute_zone, -1, (0,0,255), 2)
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 def init():
 	logger.info('Loading TensoRT model...')
 	# build the class (index/name) dictionary from labelmap file
@@ -121,48 +78,29 @@ def init():
 	dummy_img = np.zeros((416, 416, 3), dtype=np.uint8)
 	_, _, _ = trt_yolo.detect(dummy_img, 0.6)
 	logger.info('Model loaded and ready for detection')
-<<<<<<< HEAD
 
 	return trt_yolo
 
 def sms_text(tsv_url, post_time):
 	sms_response = requests.post(url= tsv_url, data='["CreateSMSText", "CV FRAUD ALERT: ({}): Transaction time threshold exceeded / {}sec {}"]'.format(cfg.machine_location, post_time, datetime.now().strftime("%c"))).json()
-=======
-	
-	return trt_yolo
-
-def sms_text(tsv_url, post_time):
-	sms_response = requests.post(url= tsv_url, data='["CreateSMSText", "CV FRAUD ALERT (UCSD): Transaction time threshold exceeded / {}sec {}"]'.format(post_time, datetime.now().strftime("%c"))).json()
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 	if sms_response['resultCode'] == "SUCCESS":
 		logger.info("   CV sms alert succesfully sent")
 	else:
 		logger.info("   CV sms alert: Failed")
 
 def initializeCamera(serial_number_list):
-<<<<<<< HEAD
 	cameras = None
-=======
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 	# Get the transport layer factory.
 	curr_time = time.localtime()
 	if curr_time.tm_hour >= 16 or curr_time.tm_hour < 6:
 		#Night mode
 		logger.info("Operating mode: Night")
-<<<<<<< HEAD
 		pfs_list = ['pfs/regus_cam0.pfs', 'pfs/regus_cam1.pfs', 'pfs/regus_cam2.pfs']
-=======
-		pfs_list = ['pfs/ic_out_front.pfs', 'pfs/ic_side.pfs', 'pfs/ic_side_cam2.pfs']
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 		#pfs_list = ['ic_out_front_day.pfs', 'ic_side_cam2_day.pfs', 'ic_side_cam2_day.pfs']
 	else:
 		#Morning mode
 		logger.info("Operating mode: Day")
-<<<<<<< HEAD
 		pfs_list = ['pfs/regus_cam0.pfs', 'pfs/regus_cam1.pfs', 'pfs/regus_cam2.pfs']
-=======
-		pfs_list = ['pfs/ic_out_front.pfs', 'pfs/ic_side.pfs', 'pfs/ic_side_cam2.pfs']
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 		#pfs_list = ['ic_out_front_night.pfs', 'ic_side_cam2_night.pfs', 'ic_side_cam2_night.pfs']
 	tlFactory = pylon.TlFactory.GetInstance()
 
@@ -178,7 +116,6 @@ def initializeCamera(serial_number_list):
 	for i, cam in enumerate(cameras):
 		info = pylon.DeviceInfo()
 		info.SetSerialNumber(str(serial_number_list[i]))
-<<<<<<< HEAD
 		try:
 			cam.Attach(tlFactory.CreateDevice(info))
 			cam.Open()
@@ -194,37 +131,16 @@ def initializeChannel():
 	#Initialize queue for door signal
 	credentials = pika.PlainCredentials('nano','nano')
 	parameters = pika.ConnectionParameters('localhost', 5672, '/', credentials, blocked_connection_timeout=3000)
-=======
-		cam.Attach(tlFactory.CreateDevice(info))
-		cam.Open()
-		pylon.FeaturePersistence.Load(pfs_list[i], cam.GetNodeMap(), True)		
-		
-	return cameras, len(devices)
-	
-	
-#RabbitMQ Initialization
-def initializeChannel():
-	#Initialize queue for door signal
-	credentials = pika.PlainCredentials(cfg.pika_name,cfg.pika_name)
-	parameters = pika.ConnectionParameters('localhost', 5672, '/', credentials, heartbeat=0, blocked_connection_timeout=3000)
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 	connection = pika.BlockingConnection(parameters)
 	channel = connection.channel()
 	channel.queue_declare(queue='cvIcount',durable = True)
 	channel2 = connection.channel()
 	channel2.queue_declare(queue='cvPost',durable = True)
 
-<<<<<<< HEAD
 	#Clear queue for pre-existing messages
 	channel.queue_purge(queue='cvIcount')
 	channel2.queue_purge(queue='cvPost')
 
-=======
-	#Clear queue for pre-existing messages 
-	channel.queue_purge(queue='cvIcount')
-	channel2.queue_purge(queue='cvPost')
-	
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 	logger.info("Rabbitmq connections initialized ")
 	return channel, channel2, connection
 
@@ -242,46 +158,26 @@ def update_logic(new_boxes, clss, frame, cam_solver, avt, frame_id,frame_draw):
 	cent2bbox = {}
 	cent2cls = {}
 	id2active_zone = {}
-<<<<<<< HEAD
-
-=======
-	
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 	for i in range(len(new_boxes)):
 		bbox = new_boxes[i]
 		cls = clss[i]
 		cents.append([(bbox[0] + bbox[2]) // 2, (bbox[1] + bbox[3]) // 2])
 		cent2bbox["{}_{}".format((bbox[0] + bbox[2]) // 2, (bbox[1] + bbox[3]) // 2)] = bbox
 		cent2cls["{}_{}".format((bbox[0] + bbox[2]) // 2, (bbox[1] + bbox[3]) // 2)] = cls
-<<<<<<< HEAD
 
 	objects, disappeared = avt.update(cents)
 
 	for (objectID, centroid) in objects.items():
-=======
-		
-	objects, disappeared = avt.update(cents)
-
-	for (objectID, centroid) in objects.items():		
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 		cent_symbol = "{}_{}".format(centroid[0], centroid[1])
 		if cent_symbol not in cent2bbox:
 			continue
 		cam_solver.update_tracks(cent2cls[cent_symbol], cent2bbox[cent_symbol], objectID, frame_id, frame)
 		id2active_zone[objectID] = cam_solver._tracks[objectID]._active_zone
-<<<<<<< HEAD
 
 		if display_mode:
 			text = "ID {}, {}".format(str(objectID), cam_solver._tracks[objectID]._active_zone)
 			cv2.putText(frame_draw, text, (centroid[0] - 10, centroid[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
 
-=======
-		
-		if display_mode:
-			text = "ID {}, {}".format(str(objectID), cam_solver._tracks[objectID]._active_zone)
-			cv2.putText(frame_draw, text, (centroid[0] - 10, centroid[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
-		
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 	return id2active_zone
 
 def solver_infer(cam_solver, logger, cv_activities, cv_pick_cam, cv_ret_cam, idle_flag = False):
@@ -289,7 +185,6 @@ def solver_infer(cam_solver, logger, cv_activities, cv_pick_cam, cv_ret_cam, idl
 
 def merge_cart(cam0_solver, cam1_solver, cam2_solver):
 	cart = defaultdict(int)
-<<<<<<< HEAD
 
 	#Running infer only on cam2 - start
 	#for cl in cam0_solver.cart:
@@ -301,17 +196,6 @@ def merge_cart(cam0_solver, cam1_solver, cam2_solver):
 		cart[cl] += cam2_solver.cart[cl]
 
 	return cart
-=======
-	for cl in cam0_solver.cart:
-		cart[cl] += cam0_solver.cart[cl]
-	for cl in cam1_solver.cart:
-		cart[cl] += cam1_solver.cart[cl]
-	for cl in cam2_solver.cart:
-		cart[cl] += cam2_solver.cart[cl]
-		
-	return cart
-		
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 
 def displayCart(det_frame, cart):
 	#cv2.putText(det_frame, 'Cart:', (500, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
@@ -320,16 +204,10 @@ def displayCart(det_frame, cart):
 		if cart[prod_ind] != 0:
 			cv2.putText(det_frame, "{}:{}".format(cls_dict[prod_ind], cart[prod_ind]), (0, 50  + 30 * cnt), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
 			cnt += 1
-<<<<<<< HEAD
-
-=======
-	
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 def infer_engine(timestr, frame0, frame1, frame2, frame_cnt0, frame_cnt1, frame_cnt2, cv_activities_cam0, cv_activities_cam1, cv_activities_cam2, cv_pick_cam0, cv_ret_cam0, cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2):
 	frame0_copy = frame0.copy()
 	frame1_copy = frame1.copy()
 	frame2_copy = frame2.copy()
-<<<<<<< HEAD
 
 	det_frame0, clss0, new_boxes0, confs0 = trt_detect(frame0, trt_yolo, conf_th, vis)
 	det_frame1, clss1, new_boxes1, confs1 = trt_detect(frame1, trt_yolo, conf_th, vis)
@@ -337,57 +215,30 @@ def infer_engine(timestr, frame0, frame1, frame2, frame_cnt0, frame_cnt1, frame_
 
 	file2info = {}
 	file2info['bboxes'] = np.asarray(np.asarray(new_boxes0, dtype=np.int32) / archive_size * save_size, dtype = np.int32).tolist()
-=======
-	
-	det_frame0, clss0, new_boxes0, confs0 = trt_detect(frame0, trt_yolo, conf_th, vis)
-	det_frame1, clss1, new_boxes1, confs1 = trt_detect(frame1, trt_yolo, conf_th, vis)
-	det_frame2, clss2, new_boxes2, confs2 = trt_detect(frame2, trt_yolo, conf_th, vis)
-	
-	file2info = {}
-	file2info['bboxes'] = np.asarray(np.asarray(new_boxes0, dtype=np.int32) / frame_size * save_size, dtype = np.int32).tolist()
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 	file2info['classes'] = np.asarray(clss0, dtype = np.int32).tolist()
 	file2info['scores'] = np.asarray(confs0).tolist()
 	if not os.path.exists("{}archive/{}/cam0/prod".format(cfg.base_path, transid)):
 		os.makedirs("{}archive/{}/cam0/prod".format(cfg.base_path, transid))
-<<<<<<< HEAD
 
 	file2info1 = {}
 	file2info1['bboxes'] = np.asarray(np.asarray(new_boxes1, dtype=np.int32) / archive_size * save_size, dtype = np.int32).tolist()
-=======
-		
-	file2info1 = {}
-	file2info1['bboxes'] = np.asarray(np.asarray(new_boxes1, dtype=np.int32) / frame_size * save_size, dtype = np.int32).tolist()
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 	file2info1['classes'] = np.asarray(clss1, dtype = np.int32).tolist()
 	file2info1['scores'] = np.asarray(confs1).tolist()
 	if not os.path.exists("{}archive/{}/cam1/prod".format(cfg.base_path, transid)):
 		os.makedirs("{}archive/{}/cam1/prod".format(cfg.base_path, transid))
-<<<<<<< HEAD
 
 	file2info2 = {}
 	file2info2['bboxes'] = np.asarray(np.asarray(new_boxes2, dtype=np.int32) / archive_size * save_size, dtype = np.int32).tolist()
-=======
-		
-	file2info2 = {}
-	file2info2['bboxes'] = np.asarray(np.asarray(new_boxes2, dtype=np.int32) / frame_size * save_size, dtype = np.int32).tolist()
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 	file2info2['classes'] = np.asarray(clss2, dtype = np.int32).tolist()
 	file2info2['scores'] = np.asarray(confs2).tolist()
 	if not os.path.exists("{}archive/{}/cam2/prod".format(cfg.base_path, transid)):
 		os.makedirs("{}archive/{}/cam2/prod".format(cfg.base_path, transid))
-<<<<<<< HEAD
-
-=======
-	
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 	f_name = "%s_%05d"%(timestr, int(frame_cnt0))
 	f_name1 = "%s_%05d"%(timestr, int(frame_cnt1))
 	f_name2 = "%s_%05d"%(timestr, int(frame_cnt2))
 	json.dump(file2info, open('{}archive/{}/cam0/prod/{}.json'.format(cfg.base_path, transid, f_name), 'w'))
 	json.dump(file2info1, open('{}archive/{}/cam1/prod/{}.json'.format(cfg.base_path, transid, f_name1), 'w'))
 	json.dump(file2info2, open('{}archive/{}/cam2/prod/{}.json'.format(cfg.base_path, transid, f_name2), 'w'))
-<<<<<<< HEAD
 
 	id2active_zone0 = update_logic(new_boxes0, clss0, frame0_copy, cam0_solver, avt0, frame_cnt0 - 1, frame0)
 	id2active_zone1 = update_logic(new_boxes1, clss1, frame1_copy, cam1_solver, avt1, frame_cnt1 - 1, frame1)
@@ -399,20 +250,6 @@ def infer_engine(timestr, frame0, frame1, frame2, frame_cnt0, frame_cnt1, frame_
 
 	cart = merge_cart(cam0_solver, cam1_solver, cam2_solver)
 
-=======
-	
-	id2active_zone0 = update_logic(new_boxes0, clss0, frame0_copy, cam0_solver, avt0, frame_cnt0 - 1, frame0)
-	id2active_zone1 = update_logic(new_boxes1, clss1, frame1_copy, cam1_solver, avt1, frame_cnt1 - 1, frame1)
-	id2active_zone2 = update_logic(new_boxes2, clss2, frame2_copy, cam2_solver, avt2, frame_cnt2 - 1, frame2)
-	
-	solver_infer(cam0_solver, logger, cv_activities_cam0, cv_pick_cam0, cv_ret_cam0)
-	solver_infer(cam1_solver, logger, cv_activities_cam1, cv_pick_cam1, cv_ret_cam1)
-	solver_infer(cam2_solver, logger, cv_activities_cam2, cv_pick_cam2, cv_ret_cam2)
-	
-	
-	cart = merge_cart(cam0_solver, cam1_solver, cam2_solver)
-	
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 	return det_frame0, det_frame1, det_frame2, cart
 
 
@@ -422,12 +259,6 @@ def distance(item1, item2):
     time1 = datetime.strptime(item1[2], "%Y-%m-%d:%H:%M:%S")
     time2 = datetime.strptime(item2[2], "%Y-%m-%d:%H:%M:%S")
     return abs((time1 - time2).total_seconds())
-<<<<<<< HEAD
-
-=======
-    
-    
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 def match(set1, set2, thresh=None):
     """
         e.g.
@@ -450,11 +281,6 @@ def match(set1, set2, thresh=None):
     rows, cols = linear_sum_assignment(cost_matrix)
     not_matched1 += set(rows).symmetric_difference(range(n))
     not_matched2 += set(cols).symmetric_difference(range(m))
-<<<<<<< HEAD
-
-=======
-    
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
     matches = []
     for row, col in zip(rows, cols):
         if (thresh and cost_matrix[row, col].sum() < thresh) or not thresh:
@@ -464,12 +290,6 @@ def match(set1, set2, thresh=None):
             not_matched2.append(col)
 
     return matches, not_matched1, not_matched2
-<<<<<<< HEAD
-=======
-    
-    
- 
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 
 def process_actions(cv_act_cam0, cv_act_cam2, timeout = 3, m_flag = False):
 	m0_act, m1_act, m2_act = match(cv_act_cam0, cv_act_cam2, timeout)
@@ -494,71 +314,38 @@ def process_actions(cv_act_cam0, cv_act_cam2, timeout = 3, m_flag = False):
 			if abs((time2 - curr_time).total_seconds()) > timeout:
 				cam2_act_index.append(ind)
 				ret_acts.append(cv_act_cam2[ind])
-<<<<<<< HEAD
 
 	cv_act_cam0 = [i for j, i in enumerate(cv_act_cam0) if j not in cam0_act_index]
 	cv_act_cam2 = [i for j, i in enumerate(cv_act_cam2) if j not in cam2_act_index]
 	return ret_acts, cv_act_cam0, cv_act_cam2
 
-=======
-	
-	cv_act_cam0 = [i for j, i in enumerate(cv_act_cam0) if j not in cam0_act_index]
-	cv_act_cam2 = [i for j, i in enumerate(cv_act_cam2) if j not in cam2_act_index]
-	return ret_acts, cv_act_cam0, cv_act_cam2
-	
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 def fuse_cam01_02_activities(cv_pick_cam0, cv_ret_cam0, cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2, matched_pick_cam01, matched_return_cam01, matched_pick_cam02, matched_return_cam02):
 	cv_pick_cam0_copy = copy.deepcopy(cv_pick_cam0)
 	cv_ret_cam0_copy = copy.deepcopy(cv_ret_cam0)
 	act_picks01, cv_pick_cam0, cv_pick_cam1 = process_actions(cv_pick_cam0, cv_pick_cam1, timeout = 3)
 	act_returns01, cv_ret_cam0, cv_ret_cam1 = process_actions(cv_ret_cam0, cv_ret_cam1, timeout = 3)
-<<<<<<< HEAD
 
 	act_picks02, cv_pick_cam0_copy, cv_pick_cam2 = process_actions(cv_pick_cam0_copy, cv_pick_cam2, timeout = 3)
 	act_returns02, cv_ret_cam0_copy, cv_ret_cam2 = process_actions(cv_ret_cam0_copy, cv_ret_cam2, timeout = 3)
 
-=======
-	
-	act_picks02, cv_pick_cam0_copy, cv_pick_cam2 = process_actions(cv_pick_cam0_copy, cv_pick_cam2, timeout = 3)
-	act_returns02, cv_ret_cam0_copy, cv_ret_cam2 = process_actions(cv_ret_cam0_copy, cv_ret_cam2, timeout = 3)
-	
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 	cv_pick_cam0_fuse = []
 	for item in cv_pick_cam0:
 		if item in cv_pick_cam0_copy:
 			cv_pick_cam0_fuse.append(item)
-<<<<<<< HEAD
-
-=======
-			
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 	cv_ret_cam0_fuse = []
 	for item in cv_ret_cam0:
 		if item in cv_ret_cam0_copy:
 			cv_ret_cam0_fuse.append(item)
-<<<<<<< HEAD
 
 	cv_pick_cam0 = cv_pick_cam0_fuse
 	cv_ret_cam0 = cv_ret_cam0_fuse
 
-=======
-			
-	cv_pick_cam0 = cv_pick_cam0_fuse
-	cv_ret_cam0 = cv_ret_cam0_fuse
-	
-	
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 	if len(act_picks01) > 0:
 		for act_pick in act_picks01:
 			matched_pick_cam01.append(act_pick)
 	if len(act_returns01) > 0:
 		for act_return in act_returns01:
 			matched_return_cam01.append(act_return)
-<<<<<<< HEAD
-
-=======
-			
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 	if len(act_picks02) > 0:
 		for act_pick in act_picks02:
 			matched_pick_cam02.append(act_pick)
@@ -566,20 +353,10 @@ def fuse_cam01_02_activities(cv_pick_cam0, cv_ret_cam0, cv_pick_cam1, cv_ret_cam
 		for act_return in act_returns02:
 			matched_return_cam02.append(act_return)
 	return cv_pick_cam0, cv_ret_cam0, cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2
-<<<<<<< HEAD
-
-=======
-	
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 
 def fuse_cam12_activities(cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2, cv_activities_fused):
 	act_picks12, cv_pick_cam1, cv_pick_cam2 = process_actions(cv_pick_cam1, cv_pick_cam2, timeout = 3, m_flag = True)
 	act_returns12, cv_ret_cam1, cv_ret_cam2 = process_actions(cv_ret_cam1, cv_ret_cam2, timeout = 3, m_flag = True)
-<<<<<<< HEAD
-
-=======
-	
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 	if len(act_picks12) > 0:
 		for act_pick in act_picks12:
 			cv_activities_fused.append({'class_id': act_pick[0], 'action': act_pick[1], 'timestamp': act_pick[2]})
@@ -591,33 +368,19 @@ def fuse_cam12_activities(cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2, 
 			logger.info("   fused action: {} {} @ {}".format(act_return[1], act_return[0], act_return[2]))
 
 	return cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2
-<<<<<<< HEAD
 
 def fuse_all_cams_activities(matched_pick_cam01, matched_pick_cam02, matched_return_cam01, matched_return_cam02, cv_activities_fused):
 	matched_act_picks012, matched_pick_cam01, matched_pick_cam02 = process_actions(matched_pick_cam01, matched_pick_cam02, timeout = 3)
 	matched_act_returns012, matched_return_cam01, matched_return_cam02 = process_actions(matched_return_cam01, matched_return_cam02, timeout = 3)
 
-=======
-	
-def fuse_all_cams_activities(matched_pick_cam01, matched_pick_cam02, matched_return_cam01, matched_return_cam02, cv_activities_fused):
-	matched_act_picks012, matched_pick_cam01, matched_pick_cam02 = process_actions(matched_pick_cam01, matched_pick_cam02, timeout = 3)
-	matched_act_returns012, matched_return_cam01, matched_return_cam02 = process_actions(matched_return_cam01, matched_return_cam02, timeout = 3)
-	
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 	if len(matched_act_picks012) > 0:
 		for act_pick in matched_act_picks012:
 			cv_activities_fused.append({'class_id': act_pick[0], 'action': act_pick[1], 'timestamp': act_pick[2]})
 			logger.info("   fused action: {} {} @ {}".format(act_pick[1], act_pick[0], act_pick[2]))
-<<<<<<< HEAD
-
-=======
-			
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 	if len(matched_act_returns012) > 0:
 		for act_return in matched_act_returns012:
 			cv_activities_fused.append({'class_id': act_return[0], 'action': act_return[1], 'timestamp': act_return[2]})
 			logger.info("   fused action: {} {} @ {}".format(act_return[1], act_return[0], act_return[2]))
-<<<<<<< HEAD
 
 	return matched_pick_cam01, matched_pick_cam02, matched_return_cam01, matched_return_cam02
 
@@ -628,38 +391,19 @@ def _bytes_feature(value):
 	return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
 #compress image bytes
-=======
-	
-	return matched_pick_cam01, matched_pick_cam02, matched_return_cam01, matched_return_cam02
-	
-	
-  
-#convert raw image to bytes
-def _bytes_feature(value):
-	if isinstance(value, type(tf.constant(0))):
-		value = value.numpy() 
-	return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
-
-#compress image bytes 
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 def img2jpeg(image):
 	is_success, im_buf_arr = cv2.imencode(".jpg", image)
 	byte_im = im_buf_arr.tobytes()
 	return byte_im
 
 if pika_flag:
-<<<<<<< HEAD
 	channel, channel2, connection = initializeChannel()
-=======
-	channel, channel2, connection  = initializeChannel()
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 
 
 avt0 = AVT()
 avt1 = AVT()
 avt2 = AVT()
 
-<<<<<<< HEAD
 trt_yolo = init()
 vis = BBoxVisualization(cls_dict)
 
@@ -668,16 +412,6 @@ cam1_solver = SideCam('cam1', cfg.cam1_zone)
 cam2_solver = SideCam('cam2', cfg.cam2_zone)
 
 
-=======
-trt_yolo = init() 
-vis = BBoxVisualization(cls_dict)
-
-cam0_solver = FrontCam('cam0', cfg.contours[0])
-cam1_solver = SideCam('cam1', cfg.contours[1])
-cam2_solver = SideCam('cam2', cfg.contours[2])
-
-contours = [np.load(contour_path, allow_pickle=True) for contour_path in cfg.contours]
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 tic = time.time()
 
 cameras, dev_len = initializeCamera([cfg.camera_map["cam0"], cfg.camera_map["cam1"], cfg.camera_map["cam2"]])
@@ -685,17 +419,10 @@ grabbing_status = 0
 frame_cnt0 = 0
 frame_cnt1 = 0
 frame_cnt2 = 0
-<<<<<<< HEAD
 act_flag = 0
 clear_flag = 0
 transid = 'trans_init'
 cv_activities = []
-=======
-thresh_cv_time = 70 # in sec
-act_flag = 0
-clear_flag = 0
-transid = 'trans_init'
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 check_list = [ False for i in range(dev_len)]
 if pika_flag:
 	door_state = 'Init'
@@ -704,7 +431,6 @@ else:
 	cameras.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
 
 
-<<<<<<< HEAD
 
 while True:
 	try:
@@ -907,212 +633,3 @@ while True:
 	except Exception as e:
 		logger.info(traceback.format_exc())
 		raise
-=======
-cv_activities=[]
-while True:
-	if pika_flag:
-		_,_,recv = channel.basic_get('cvIcount')
-		if recv != None:
-			#print(recv)
-			recv = str(recv,'utf-8')
-			recv =json.loads(recv)
-
-			#clear_flag = 0
-			if recv["cmd"] == 'DoorOpened':
-				transid = recv["parm1"].split(":")[0]
-				door_info = recv["parm1"].split(":")[1]
-				logger.info("   RECV: {} / cvIcount".format(recv["cmd"]))
-				logger.info("      TRANSID: {}".format(transid))
-				door_state = "DoorOpened"
-				duration_time = 0
-				frame_cnt0 = 0
-				frame_cnt1 = 0
-				frame_cnt2 = 0
-				cv_activities_cam0 = []
-				cv_activities_cam1 = []
-				cv_activities_cam2 = []
-				cv_pick_cam0 = []
-				cv_ret_cam0 = []
-				cv_pick_cam1 = []
-				cv_ret_cam1 = []
-				cv_pick_cam2 = []
-				cv_ret_cam2 = []
-				matched_pick_cam01 = []
-				matched_return_cam01 = []
-				matched_pick_cam02 = []
-				matched_return_cam02 = []
-				
-				cv_activities = []
-				ls_activities = []
-
-				if grabbing_status == 0 and door_info == 'True':
-					cameras.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
-					grabbing_status = 1
-					start_time = time.time()
-					logger.info("      Retail mode: Starting record")
-
-			
-				
-			elif recv["cmd"] == 'DoorLocked':
-				transid = recv["parm1"]
-				logger.info("   RECV: {} / cvIcount".format(recv["cmd"]))
-				logger.info("      TRANSID: {}".format(transid))
-				door_state = "DoorLocked"
-				if grabbing_status == 1:
-					cameras.StopGrabbing()
-					grabbing_status = 0
-					stop_time = time.time()
-					duration_time = int(stop_time - start_time)
-					logger.info("   Transaction duration: {}s".format(duration_time))
-					if duration_time >= thresh_cv_time:
-						sms_text(tsv_url, duration_time)
-				#act_flag = 1 #only for simulation, please remove this line in real transaction
-
-			elif recv["cmd"] == "ActivityID":
-				ls_activities = recv["parm1"]
-				act_flag = 1
-			else:
-				logger.info("      {}".format(recv["cmd"]))
-
-	if door_state == "DoorOpened":
-		clear_flag = 1
-		if cameras.IsGrabbing():
-			try:
-				grabResult = cameras.RetrieveResult(10000, pylon.TimeoutHandling_ThrowException)
-			except:
-				logger.info("Camera Disconnected")
-				cameras.Close()
-				cameras, dev_len = initializeCamera([cfg.camera_map["cam0"], cfg.camera_map["cam1"], cfg.camera_map["cam2"]])
-				check_list = [ False for i in range(dev_len)]
-				cameras.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
-				continue
-				
-			cameraContextValue = grabResult.GetCameraContext()				
-				
-			if grabResult.GrabSucceeded():
-				if cameraContextValue == 0:
-					frame_cnt0 += 1
-					frame0 = cv2.resize(np.uint8(grabResult.Array), (frame_size, frame_size))
-					check_list[0] = True
-					if archive_flag:
-						data = {
-							  'bytes': _bytes_feature(value = img2jpeg(cv2.resize(frame0, (save_size, save_size)))), 
-							  'timestamp': _bytes_feature(value = time.strftime(timestamp_format).encode('utf-8'))
-							}
-
-				elif cameraContextValue == 1:
-					frame_cnt1 += 1
-					frame1 = cv2.resize(np.uint8(grabResult.Array), (frame_size, int(frame_size / 1280 * 960)))
-					frame1 = cv2.rotate(frame1, cv2.ROTATE_90_COUNTERCLOCKWISE)
-					height, width = frame_size, int(frame_size / 1280 * 960)
-					plot = np.zeros((frame_size, frame_size, 3))
-					plot[:, (height - width) // 2:(height - width) // 2 + width] = frame1
-					frame1 = plot.astype(np.uint8)
-
-					check_list[1] = True
-					if archive_flag:
-						data = {
-							  'bytes': _bytes_feature(value = img2jpeg(cv2.resize(frame1, (save_size, save_size)))), 
-							  'timestamp': _bytes_feature(value = time.strftime(timestamp_format).encode('utf-8'))
-							}
-							
-							
-				else:
-					frame_cnt2 += 1
-					frame2 = cv2.resize(np.uint8(grabResult.Array), (frame_size, int(frame_size / 1280 * 960)))
-					frame2 = cv2.rotate(frame2, cv2.ROTATE_90_COUNTERCLOCKWISE)
-					height, width = frame_size, int(frame_size / 1280 * 960)
-					plot = np.zeros((frame_size, frame_size, 3))
-					plot[:, (height - width) // 2:(height - width) // 2 + width] = frame2
-					frame2 = plot.astype(np.uint8)
-
-					check_list[2] = True
-					if archive_flag:
-						data = {
-							  'bytes': _bytes_feature(value = img2jpeg(cv2.resize(frame2, (save_size, save_size)))), 
-							  'timestamp': _bytes_feature(value = time.strftime(timestamp_format).encode('utf-8'))
-							}
-				
-				if archive_flag:					
-					features = tf.train.Features(feature=data)
-					example = tf.train.Example(features=features)
-					serialized = example.SerializeToString()
-					
-					
-					if init_process == True:
-						if not os.path.exists("{}archive/{}".format(cfg.base_path, transid)):
-							os.makedirs("{}archive/{}".format(cfg.base_path, transid))
-						writer0 = tf.python_io.TFRecordWriter("{}archive/{}/img_0.tfrecords".format(cfg.base_path, transid))
-						writer1 = tf.python_io.TFRecordWriter("{}archive/{}/img_1.tfrecords".format(cfg.base_path, transid))
-						writer2 = tf.python_io.TFRecordWriter("{}archive/{}/img_2.tfrecords".format(cfg.base_path, transid))
-						init_process = False
-						
-					if cameraContextValue == 0:
-						writer0.write(serialized)
-					elif cameraContextValue == 1:
-						writer1.write(serialized)
-					else:
-						writer2.write(serialized)
-					
-						
-			if all(check_list):
-				check_list = np.logical_not(check_list)
-
-				if icount_mode:
-					timestr = time.strftime(timestamp_format)
-					det_frame0, det_frame1, det_frame2, cart = infer_engine(timestr, frame0, frame1, frame2, frame_cnt0, frame_cnt1, frame_cnt2, cv_activities_cam0, cv_activities_cam1, cv_activities_cam2, cv_pick_cam0, cv_ret_cam0, cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2)
-				
-					#cv_pick_cam0, cv_ret_cam0, cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2 = fuse_cam01_02_activities(cv_pick_cam0, cv_ret_cam0, cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2, \
-					#																									matched_pick_cam01, matched_return_cam01, matched_pick_cam02, matched_return_cam02)
-					#cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2 = fuse_cam12_activities(cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2, cv_activities)
-					#matched_pick_cam01, matched_pick_cam02, matched_return_cam01, matched_return_cam02 = fuse_all_cams_activities(matched_pick_cam01, matched_pick_cam02, matched_return_cam01, matched_return_cam02, cv_activities)
-				
-				if display_mode:
-					if cfg.display_mode and cfg.show_contours:
-						for img, c in zip([det_frame0, det_frame1, det_frame2], [contours[0], contours[1], contours[2]]):
-							draw_contours(img, c, frame_size)
-					img_hstack = det_frame0
-					img_hstack = np.hstack((img_hstack, det_frame1))
-					img_hstack = np.hstack((img_hstack, det_frame2))
-					img_hstack = show_fps(img_hstack, fps)
-					displayCart(img_hstack, cart)
-					
-					cv2.imshow('Yo', img_hstack[:,:,::-1])
-					
-					key = cv2.waitKey(1)
-					if key == 27:  # ESC key: quit program
-						break
-				
-				toc = time.time()
-				curr_fps = 1.0 / (toc- tic)
-				fps = curr_fps if fps == 0.0 else (fps*0.95 + curr_fps*0.05)
-				tic = toc
-				if frame_cnt0 % 20 == 0:
-					print(fps)
-				#time.sleep(0.005)
-			grabResult.Release()
-
-
-	elif door_state == "DoorLocked" and clear_flag == 1:
-		if archive_flag and door_info == 'True':
-			writer0.close()
-			writer1.close()
-			writer2.close()
-			init_process = True
-		clear_flag = 0
-
-	elif door_state == "DoorLocked" and act_flag == 1:
-		if len(cv_activities) > 0:
-			cv_activities = sorted(cv_activities, key=lambda d: d['timestamp']) 
-			#print(cv_activities)
-		data = {"cmd": "Done", "transid": transid, "timestamp": time.strftime("%Y%m%d-%H_%M_%S"), "cv_activities": cv_activities, "ls_activities": ls_activities}
-		mess = json.dumps(data)
-		channel2.basic_publish(exchange='',
-						routing_key="cvPost",
-						body=mess)
-		logger.info("Sent cvPost signal\n")
-		door_state = 'initialize'
-		ls_activities = ""
-		act_flag = 0
-
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
