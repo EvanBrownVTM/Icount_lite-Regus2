@@ -59,6 +59,8 @@ archive_size = cfg.archive_size
 save_size = cfg.save_size
 display_mode = cfg.display_mode
 pika_flag = cfg.pika_flag
+icount_mode = cfg.icount_mode
+cls_dict = cfg.cls_dict
 
 #Initialization
 tsv_url = 'http://192.168.1.140:8085/tsv/flashapi'
@@ -66,7 +68,6 @@ init_process = True
 timestamp_format = "%Y%m%d-%H_%M_%S"
 fps = 0.0
 conf_th = 0.7
-cls_dict = cfg.cls_dict
 
 def init():
 	logger.info('Loading TensoRT model...')
