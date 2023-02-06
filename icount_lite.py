@@ -398,17 +398,17 @@ def img2jpeg(image):
 if pika_flag:
 	channel, channel2, connection = initializeChannel()
 
+if icount_mode:
+	avt0 = AVT()
+	avt1 = AVT()
+	avt2 = AVT()
 
-avt0 = AVT()
-avt1 = AVT()
-avt2 = AVT()
+	trt_yolo = init()
+	vis = BBoxVisualization(cls_dict)
 
-trt_yolo = init()
-vis = BBoxVisualization(cls_dict)
-
-cam0_solver = FrontCam('cam0', cfg.cam0_zone)
-cam1_solver = SideCam('cam1', cfg.cam1_zone)
-cam2_solver = SideCam('cam2', cfg.cam2_zone)
+	cam0_solver = FrontCam('cam0', cfg.cam0_zone)
+	cam1_solver = SideCam('cam1', cfg.cam1_zone)
+	cam2_solver = SideCam('cam2', cfg.cam2_zone)
 
 
 tic = time.time()
@@ -603,23 +603,16 @@ while True:
 				writer2.close()
 				init_process = True
 
+			if len(cv_activities) > 0:
+				cv_activities = sorted(cv_activities, key=lambda d: d['timestamp']) 
+			data = {"cmd": "Done", "transid": transid, "timestamp": time.strftime("%Y%m%d-%H_%M_%S"), "cv_activities": cv_activities, "ls_activities": ls_activities}
+			mess = json.dumps(data)
+			channel2.basic_publish(exchange='',
+							routing_key="cvPost",
+							body=mess)
 			if icount_mode:
-				if len(cv_activities) > 0:
-					cv_activities = sorted(cv_activities, key=lambda d: d['timestamp']) 
-				#print(cv_activities)
-				data = {"cmd": "Done", "transid": transid, "timestamp": time.strftime("%Y%m%d-%H_%M_%S"), "cv_activities": cv_activities, "ls_activities": ls_activities}
-				mess = json.dumps(data)
-				channel2.basic_publish(exchange='',
-								routing_key="cvPost",
-								body=mess)
 				logger.info("Sent cvPost signal (Icount mode)\n")
-
 			else:
-				data = {"cmd": "Done", "transid": transid, "timestamp": time.strftime("%Y%m%d-%H_%M_%S"), "cv_activities": cv_activities, "ls_activities": ls_activities}
-				mess = json.dumps(data)
-				channel2.basic_publish(exchange='',
-								routing_key="cvPost",
-								body=mess)
 				logger.info("Sent cvPost signal (Recording-only mode)\n")
 
 			door_state = 'initialize'
