@@ -36,7 +36,7 @@ import traceback
 import pycuda.autoinit  # This is needed for initializing CUDA driver
 import multiprocessing
 
-import utils_lite.configSrc as cfg
+import configSrc as cfg
 
 import configSrc as cfg
 
@@ -462,9 +462,6 @@ def main():
 		logger.info('   MACHINE ID: {}'.format(machine_id))
 		logger.info('   MACHINE TOKEN: {}'.format(machine_token))
 		logger.info('   MACHINE API KEY: {}'.format(machine_api_key))
-
-
-		logger.info('   Access token: {}'.format(access_token))
 
 
 		while(1):
