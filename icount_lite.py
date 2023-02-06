@@ -571,14 +571,16 @@ while True:
 
 					timestr = time.strftime(timestamp_format)
 					check_list = np.logical_not(check_list)
-					det_frame0, det_frame1, det_frame2, cart = infer_engine(timestr, frame0, frame1, frame2, frame_cnt0, frame_cnt1, frame_cnt2, cv_activities_cam0, cv_activities_cam1, cv_activities_cam2, cv_pick_cam0, cv_ret_cam0, cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2)
-					#Performing simple inference / cam2 only
-					cv_activities = cv_activities_cam2 + cv_activities_cam0 + cv_activities_cam1
 
-					#cv_pick_cam0, cv_ret_cam0, cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2 = fuse_cam01_02_activities(cv_pick_cam0, cv_ret_cam0, cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2, \
-					#																									matched_pick_cam01, matched_return_cam01, matched_pick_cam02, matched_return_cam02)
-					#cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2 = fuse_cam12_activities(cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2, cv_activities)matched_return_cam01,
-					#matched_pick_cam01, matched_pick_cam02, matched_return_cam01, matched_return_cam02 = fuse_all_cams_activities(matched_pick_cam01, matched_pick_cam02, matched_return_cam01, matched_return_cam02, cv_activities)
+					if icount_mode:
+						det_frame0, det_frame1, det_frame2, cart = infer_engine(timestr, frame0, frame1, frame2, frame_cnt0, frame_cnt1, frame_cnt2, cv_activities_cam0, cv_activities_cam1, cv_activities_cam2, cv_pick_cam0, cv_ret_cam0, cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2)
+						#Performing simple inference / cam2 only
+						cv_activities = cv_activities_cam2 + cv_activities_cam0 + cv_activities_cam1
+
+						#cv_pick_cam0, cv_ret_cam0, cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2 = fuse_cam01_02_activities(cv_pick_cam0, cv_ret_cam0, cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2, \
+						#																									matched_pick_cam01, matched_return_cam01, matched_pick_cam02, matched_return_cam02)
+						#cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2 = fuse_cam12_activities(cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2, cv_activities)matched_return_cam01,
+						#matched_pick_cam01, matched_pick_cam02, matched_return_cam01, matched_return_cam02 = fuse_all_cams_activities(matched_pick_cam01, matched_pick_cam02, matched_return_cam01, matched_return_cam02, cv_activities)
 
 					if display_mode:
 						img_hstack = det_frame0
@@ -612,15 +614,25 @@ while True:
 			clear_flag = 0
 
 		elif door_state == "DoorLocked" and act_flag == 1:
-			if len(cv_activities) > 0:
-				cv_activities = sorted(cv_activities, key=lambda d: d['timestamp']) 
-			#print(cv_activities)
-			data = {"cmd": "Done", "transid": transid, "timestamp": time.strftime("%Y%m%d-%H_%M_%S"), "cv_activities": cv_activities, "ls_activities": ls_activities}
-			mess = json.dumps(data)
-			channel2.basic_publish(exchange='',
-							routing_key="cvPost",
-							body=mess)
-			logger.info("Sent cvPost signal\n")
+			if icount_mode:
+				if len(cv_activities) > 0:
+					cv_activities = sorted(cv_activities, key=lambda d: d['timestamp']) 
+				#print(cv_activities)
+				data = {"cmd": "Done", "transid": transid, "timestamp": time.strftime("%Y%m%d-%H_%M_%S"), "cv_activities": cv_activities, "ls_activities": ls_activities}
+				mess = json.dumps(data)
+				channel2.basic_publish(exchange='',
+								routing_key="cvPost",
+								body=mess)
+				logger.info("Sent cvPost signal (Icount mode)\n")
+
+			else:
+				data = {"cmd": "Done", "transid": transid, "timestamp": time.strftime("%Y%m%d-%H_%M_%S"), "cv_activities": cv_activities, "ls_activities": ls_activities}
+				mess = json.dumps(data)
+				channel2.basic_publish(exchange='',
+								routing_key="cvPost",
+								body=mess)
+				logger.info("Sent cvPost signal (Recording-only mode)\n")
+
 			door_state = 'initialize'
 			ls_activities = ""
 			act_flag = 0

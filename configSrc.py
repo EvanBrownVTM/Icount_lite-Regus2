@@ -28,3 +28,4 @@ archive_size = 416
 save_size = 200
 display_mode = False
 pika_flag = True
+icount_mode = False
