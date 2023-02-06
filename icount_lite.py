@@ -485,10 +485,10 @@ while True:
 							if cfg.sms_alert:
 								sms_text(tsv_url, duration_time)
 						logger.info("")
-			elif recv["cmd"] == "ActivityID":
-				ls_activities = recv["parm1"]
-			else:
-				logger.info("      {}".format(recv["cmd"]))
+				elif recv["cmd"] == "ActivityID":
+					ls_activities = recv["parm1"]
+				else:
+					logger.info("      {}".format(recv["cmd"]))
 					
 		if door_state == "DoorOpened":
 			act_flag = 1
