@@ -37,6 +37,7 @@ from utils.visualization_ic import BBoxVisualization
 from utils_lite.tracker import AVT
 from utils_lite.front_cam_solver import FrontCam
 from utils_lite.side_cam_solver import SideCam
+from  utils_lite.utils import descale_contour
 from datetime import datetime
 from scipy.optimize import linear_sum_assignment
 
@@ -487,6 +488,7 @@ while True:
 						logger.info("")
 				elif recv["cmd"] == "ActivityID":
 					ls_activities = recv["parm1"]
+					logger.info("      {}  ls_activities: {}".format(recv["cmd"], ls_activities))
 				else:
 					logger.info("      {}".format(recv["cmd"]))
 					
