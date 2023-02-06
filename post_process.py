@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 ######################################
 '''
 Date: Nov 29, 2022
@@ -16,8 +15,6 @@ To-do
 '''
 ######################################
 
-=======
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
 import os
 import sys
 sys.path.append("/usr/lib/python3.6/site-packages/")
@@ -25,10 +22,9 @@ sys.path.append("/usr/local/cuda-10.2/bin")
 sys.path.append("/usr/local/cuda-10.2/lib64")
 import time
 import logging
-<<<<<<< HEAD
+
 import login
-=======
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
+
 import pika
 import copy
 import numpy as np
@@ -39,31 +35,31 @@ import random
 import traceback
 import pycuda.autoinit  # This is needed for initializing CUDA driver
 import multiprocessing
-<<<<<<< HEAD
+
 import utils_lite.configSrc as cfg
-=======
+
 import configSrc as cfg
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
+
 import tensorflow as tf
 import requests
 import moviepy.video.io.ImageSequenceClip
 from datetime import datetime
 from scipy.optimize import linear_sum_assignment
-<<<<<<< HEAD
 
-=======
+
+
 import login
 import pickle
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
+
 
 logging.getLogger("pika").setLevel(logging.WARNING)
 logging.getLogger('requests').setLevel(logging.WARNING)
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
-<<<<<<< HEAD
+
 logging.basicConfig(filename='{}logs/Post.log'.format(cfg.log_path), level=logging.DEBUG, format="%(asctime)-8s %(levelname)-8s %(message)s")
-=======
+
 logging.basicConfig(filename='/home/cvnx/Desktop/logs/Post.log', level=logging.DEBUG, format="%(asctime)-8s %(levelname)-8s %(message)s")
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
+
 logging.disable(logging.DEBUG)
 logger=logging.getLogger()
 logger.info("")
@@ -74,10 +70,10 @@ archive_size = 200
 config = tf.ConfigProto()
 config.gpu_options.allow_growth=True
 sess = tf.Session(config=config)
-<<<<<<< HEAD
-=======
+
+
 #cls_dict = {0:'vickies', 1:'coke', 2:'gatorade', 3:'sun_chips', 4:'doritos', 5:'lays', 6:'monster', 7:'gold_peak', 8:'diet_coke', 9:'sprite'}
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
+
 cls_dict = cfg.cls_dict
 
 prod_json = requests.post(url = vicki_app, data = "['fetchProduct']").json()
@@ -85,7 +81,7 @@ name2id = {}
 for prod in prod_json:
 	name2id[prod['productName']] = prod['description']
 
-<<<<<<< HEAD
+
 
 def get_custom_machine_setting(custom_machine_setting):
 	while True:
@@ -114,10 +110,10 @@ def login_as_machine(url, id, token, api_key):
                 logger.info("Error logging in as machine.")
                 return -1
 
-=======
+
 #print(name2id)
 #name2id = {"Peanut MMs":"b9d644d0-40d4-4d65-82a0-c94d474f13b3", "Sour Patch Kids": "1fef14b0-f36e-4ed1-9686-90e099183829"}
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
+
 
 def make_archive(source, destination, format='zip'):
 	base, name = os.path.split(destination)
@@ -297,7 +293,7 @@ def gen_trans_summary(transid, cv_activities, ls_activities):
 		elif act['user_activity_type'] == 'USER_PUTBACK':
 			ret_acts.append(act)
 
-<<<<<<< HEAD
+
 	logger.info("     CV PICK: {}".format(cv_pick))
 	logger.info("     LS PICK: {}".format(pick_acts))
 	m0_pick, m1_pick, m2_pick = match(cv_pick, pick_acts, 4)
@@ -305,11 +301,11 @@ def gen_trans_summary(transid, cv_activities, ls_activities):
 	logger.info(" ")
 	logger.info("     PICK matches: {}".format(m0_pick))
 	logger.info("     RETURN matches: {}".format(m0_ret))
-=======
+
 	m0_pick, m1_pick, m2_pick = match(cv_pick, pick_acts, 4)
 	m0_ret, m1_ret, m2_ret = match(cv_ret, ret_acts, 4)
 
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
+
 
 	for i in range(len(m0_pick)):
 		cv_ind = m0_pick[i][0]
@@ -321,19 +317,14 @@ def gen_trans_summary(transid, cv_activities, ls_activities):
 				"cv_confidence_score": random.randint(90,99),
 				"cv_product_id": cv_pick[cv_ind][0],
 				"cv_validation": "True",
-<<<<<<< HEAD
-				#"is_validation": "True",
+				"is_validation": "True",
 				"activity_time": pick_acts[ls_ind]['activity_time']})
-
-		#if pick_acts[ls_ind]['product_name'] != cv_pick[cv_ind][0]: #Since is validation is handled by TSV
-		#	activities[-1]["is_validation"] = "False"
-=======
 				"is_validation": "True",
 				"activity_time": pick_acts[ls_ind]['activity_time']})
 
 		if pick_acts[ls_ind]['product_name'] != cv_pick[cv_ind][0]:
 			activities[-1]["is_validation"] = "False"
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
+
 
 	'''
 	for i in range(len(m2_pick)):
@@ -356,19 +347,19 @@ def gen_trans_summary(transid, cv_activities, ls_activities):
 				"cv_confidence_score": random.randint(90,99),
 				"cv_product_id": cv_ret[cv_ind][0],
 				"cv_validation": "True",
-<<<<<<< HEAD
+
 				#"is_validation": "True",
 				"activity_time": ret_acts[ls_ind]['activity_time']})
 
 		#if ret_acts[ls_ind]['product_name'] != cv_ret[cv_ind][0]: #Since is validation is handled by TSV
 		#	activities[-1]["is_validation"] = "False"
-=======
+
 				"is_validation": "True",
 				"activity_time": ret_acts[ls_ind]['activity_time']})
 
 		if ret_acts[ls_ind]['product_name'] != cv_ret[cv_ind][0]:
 			activities[-1]["is_validation"] = "False"
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
+
 	'''
 	for i in range(len(m2_ret)):
 		ls_ind = m2_ret[i]
@@ -410,12 +401,12 @@ def postprocess(transid, base_url, headers, cv_activities, ls_activities):
 		logger.info("      Cam 2 TFRecord no available")
 		return
 
-<<<<<<< HEAD
+
 	if not os.path.exists('post_archive'):
                 os.makedirs('post_archive')
 
-=======
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
+
+
 	if not os.path.exists('post_archive/{}/cam0'.format(transid)):
 		os.makedirs('post_archive/{}/cam0'.format(transid))
 	if not os.path.exists('post_archive/{}/cam1'.format(transid)):
@@ -476,10 +467,10 @@ def main():
 		logger.info('   MACHINE ID: {}'.format(machine_id))
 		logger.info('   MACHINE TOKEN: {}'.format(machine_token))
 		logger.info('   MACHINE API KEY: {}'.format(machine_api_key))
-<<<<<<< HEAD
-=======
+
+
 		logger.info('   Access token: {}'.format(access_token))
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
+
 
 		while(1):
 			_,_,recv1 = channel.basic_get('cvPost')
@@ -492,7 +483,7 @@ def main():
 
 				logger.info("")
 				logger.info("   Received: " + transid)
-<<<<<<< HEAD
+
 
 				logger.info("     LS log info: Start")
 				logger.info("  {}".format(ls_activities))
@@ -509,7 +500,7 @@ def main():
 				
 	except KeyboardInterrupt as k:
 		logger.info("Exiting app\n")
-=======
+
 				access_token = login.get_current_access_token(base_url, machine_id, machine_token, machine_api_key, logger)
 				headers = {"Authorization": "Bearer {}".format(access_token)}
 				postprocess(transid, base_url, headers, cv_activities, ls_activities)
@@ -518,7 +509,7 @@ def main():
 				logger.info("  "+ls_activities)
 				logger.info("     LS log info: End")
 				logger.info("   Finished Current Transaction")
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
+
 
 	except Exception as e:
 		logger.info(traceback.format_exc())
@@ -527,7 +518,7 @@ def main():
 
 if __name__ == "__main__":
 	main()
-<<<<<<< HEAD
 
-=======
->>>>>>> 829de47c8188bdfc7dc5d3253d63e97a9bc70cad
+
+
+
