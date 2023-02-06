@@ -598,12 +598,16 @@ while True:
 
 
 		elif door_state == "DoorLocked" and act_flag == 1:
+			#logger.info("DEBUG:DoorLocked and act_flag==1")
 			if archive_flag:
 				writer0.close()
 				writer1.close()
 				writer2.close()
 				init_process = True
-
+			logger.info('CV_activities:')
+			logger.info(cv_activities)
+			logger.info('LS_activities:')
+			logger.info(ls_activities)
 			if (len(cv_activities) > 0) or (len(ls_activities) > 0): #only send signal to postprocess if we have either a cv_activity or a ls_activity
 				if len(cv_activities) > 0:
 					cv_activities = sorted(cv_activities, key=lambda d: d['timestamp']) 

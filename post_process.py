@@ -280,8 +280,11 @@ def gen_trans_summary(transid, cv_activities, ls_activities):
 		else:
 			cv_ret.append((cls_dict[act['class_id']], 'RETURN', act['timestamp']))
 
-	ls_recv = json.loads(ls_activities.replace('null', '-1'))
-	ls_acts = ls_recv['user_activity_instance']['user_activities']
+	print(ls_activities)
+	ls_acts = []
+	if ls_activities:
+		ls_recv = json.loads(ls_activities.replace('null', '-1'))
+		ls_acts = ls_recv['user_activity_instance']['user_activities']
 	pick_acts = []
 	ret_acts = []
 	trans_summary = {"user_activity_request_type" : "ORDER_ACTIVITY_REPORT", "invoice_id":transid}
