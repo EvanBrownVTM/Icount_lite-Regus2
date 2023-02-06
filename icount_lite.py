@@ -67,7 +67,6 @@ timestamp_format = "%Y%m%d-%H_%M_%S"
 fps = 0.0
 conf_th = 0.7
 cls_dict = cfg.cls_dict
-clear_flag = 0
 
 def init():
 	logger.info('Loading TensoRT model...')
@@ -420,7 +419,6 @@ frame_cnt0 = 0
 frame_cnt1 = 0
 frame_cnt2 = 0
 act_flag = 0
-clear_flag = 0
 transid = 'trans_init'
 cv_activities = []
 check_list = [ False for i in range(dev_len)]
@@ -439,10 +437,8 @@ while True:
 			if recv != None:
 				recv = str(recv,'utf-8')
 				recv =json.loads(recv)
-				#clear_flag = 0
 				if recv["cmd"] == 'DoorOpened':
 					transid = recv["parm1"].split(":")[0]
-					door_info = recv["parm1"].split(":")[1]
 					logger.info("")
 					logger.info("   RECV: {} / cvIcount".format(recv["cmd"]))
 					logger.info("      TRANSID: {}".format(transid))
@@ -468,7 +464,7 @@ while True:
 
 					cv_activities = []
 					ls_activities = []
-					if grabbing_status == 0 and door_info == 'True': # Actual application and
+					if grabbing_status == 0: 
 						cameras.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
 						grabbing_status = 1
 						start_time = time.time()
@@ -491,14 +487,9 @@ while True:
 							if cfg.sms_alert:
 								sms_text(tsv_url, duration_time)
 						logger.info("")
-					#act_flag = 1 #only for simulation, please remove this line in real transaction
-
-				elif recv["cmd"] == "ActivityID":
-					ls_activities = recv["parm1"]
-					act_flag = 1
 					
 		if door_state == "DoorOpened":
-			clear_flag = 1
+			act_flag = 1
 			if cameras.IsGrabbing():
 				try:
 					grabResult = cameras.RetrieveResult(10000, pylon.TimeoutHandling_ThrowException)
@@ -605,15 +596,13 @@ while True:
 				grabResult.Release()
 
 
-		elif door_state == "DoorLocked" and clear_flag == 1:
-			if archive_flag and door_info == 'True':
+		elif door_state == "DoorLocked" and act_flag == 1:
+			if archive_flag:
 				writer0.close()
 				writer1.close()
 				writer2.close()
 				init_process = True
-			clear_flag = 0
 
-		elif door_state == "DoorLocked" and act_flag == 1:
 			if icount_mode:
 				if len(cv_activities) > 0:
 					cv_activities = sorted(cv_activities, key=lambda d: d['timestamp']) 
