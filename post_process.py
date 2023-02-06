@@ -319,8 +319,6 @@ def gen_trans_summary(transid, cv_activities, ls_activities):
 				"cv_validation": "True",
 				"is_validation": "True",
 				"activity_time": pick_acts[ls_ind]['activity_time']})
-				"is_validation": "True",
-				"activity_time": pick_acts[ls_ind]['activity_time']})
 
 		if pick_acts[ls_ind]['product_name'] != cv_pick[cv_ind][0]:
 			activities[-1]["is_validation"] = "False"
@@ -353,9 +351,6 @@ def gen_trans_summary(transid, cv_activities, ls_activities):
 
 		#if ret_acts[ls_ind]['product_name'] != cv_ret[cv_ind][0]: #Since is validation is handled by TSV
 		#	activities[-1]["is_validation"] = "False"
-
-				"is_validation": "True",
-				"activity_time": ret_acts[ls_ind]['activity_time']})
 
 		if ret_acts[ls_ind]['product_name'] != cv_ret[cv_ind][0]:
 			activities[-1]["is_validation"] = "False"
@@ -500,16 +495,6 @@ def main():
 				
 	except KeyboardInterrupt as k:
 		logger.info("Exiting app\n")
-
-				access_token = login.get_current_access_token(base_url, machine_id, machine_token, machine_api_key, logger)
-				headers = {"Authorization": "Bearer {}".format(access_token)}
-				postprocess(transid, base_url, headers, cv_activities, ls_activities)
-
-				logger.info("     LS log info: Start")
-				logger.info("  "+ls_activities)
-				logger.info("     LS log info: End")
-				logger.info("   Finished Current Transaction")
-
 
 	except Exception as e:
 		logger.info(traceback.format_exc())
