@@ -616,7 +616,8 @@ while True:
 					logger.info("Sent cvPost signal (Icount mode)\n")
 				else:
 					logger.info("Sent cvPost signal (Recording-only mode)\n")
-
+			else:
+				logger.info("No cvPost signal sent - no CV or LS activities")
 			door_state = 'initialize'
 			ls_activities = ""
 			act_flag = 0
