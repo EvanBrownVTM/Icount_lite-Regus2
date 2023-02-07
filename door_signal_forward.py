@@ -1,5 +1,5 @@
 import time
-import utils_lite.configSrc as cfg
+import configSrc as cfg
 import logging
 import pika
 import sys

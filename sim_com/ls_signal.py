@@ -9,7 +9,7 @@ channel = connection.channel()
 
 channel.queue_declare(queue="cvIcount",durable = True)
 
-data = '{\n "cmd": "ActivityID", \n "parm1":"['test']"\n}'
+data = '{\n "cmd": "ActivityID", \n "parm1": "test" \n}'
 mess = json.dumps(data)
 mess =json.loads(mess)
 

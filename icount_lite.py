@@ -488,12 +488,11 @@ while True:
 						logger.info("")
 				elif recv["cmd"] == "ActivityID":
 					ls_activities = recv["parm1"]
-					logger.info("      {}  ls_activities: {}".format(recv["cmd"], ls_activities))
-				else:
-					logger.info("      {}".format(recv["cmd"]))
+					act_flag = 1
+				
+				logger.info("Received pika signal with command:      {}".format(recv["cmd"]))
 					
 		if door_state == "DoorOpened":
-			act_flag = 1
 			if cameras.IsGrabbing():
 				try:
 					grabResult = cameras.RetrieveResult(10000, pylon.TimeoutHandling_ThrowException)
@@ -602,6 +601,13 @@ while True:
 
 		elif door_state == "DoorLocked" and act_flag == 1:
 			#logger.info("DEBUG:DoorLocked and act_flag==1")
+			data = {"cmd": "Done", "transid": transid, "timestamp": time.strftime("%Y%m%d-%H_%M_%S"), "cv_activities": cv_activities, "ls_activities": ls_activities}
+			mess = json.dumps(data)
+			channel2.basic_publish(exchange='',
+						routing_key="cvPost",
+						body=mess)
+			time.sleep(15)
+
 			if archive_flag:
 				writer0.close()
 				writer1.close()
