@@ -75,7 +75,7 @@ def getFrames(camera_dirs):
 def init():
 	logger.info('Loading TensoRT model...')
 	# build the class (index/name) dictionary from labelmap file
-	trt_yolo = TrtYOLO("yolov4-tiny-416", (416, 416), 4, False, path_folder = 'yolo/')
+	trt_yolo = TrtYOLO("yolov4x-mish-416", (416, 416), 4, False, path_folder = 'yolo/')
 
 	#print('\tRunning warmup detection')
 	dummy_img = np.zeros((416, 416, 3), dtype=np.uint8)
@@ -387,13 +387,7 @@ transid = 'trans_init'
 cv_activities = []
 check_list = [ False for i in range(maxCamerasToUse)]
 
-def main():
-	#get user input transid
-	parser = argparse.ArgumentParser()
-	parser.add_argument('--transid')
-	args = parser.parse_known_args()
-	transid = args.transid
-
+def main(transid):
 	#load frames
 	camera_dirs = [os.path.join(base_path, 'archive', x) for x in ['cam0', 'cam1', 'cam2']]
 	frames0, frames1, frames2 = getFrames(camera_dirs)
@@ -526,3 +520,14 @@ def main():
 			logger.info("No cvPost signal sent - no CV or LS activities")
 		door_state = 'initialize'
 		ls_activities = ""
+
+if __name__ == '__main__':
+	#get user input transid
+	parser = argparse.ArgumentParser()
+	parser.add_argument('--transid')
+	args = parser.parse_known_args()
+	print(args)
+	transid = args.transid
+	print(transid)
+
+	main(transid)
