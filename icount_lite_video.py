@@ -50,7 +50,7 @@ logging.getLogger("tensorflow").setLevel(logging.ERROR)
 logging.basicConfig(filename='{}logs/Icount.log'.format(cfg.log_path), level=logging.DEBUG, format="%(asctime)-8s %(levelname)-8s %(message)s")
 logging.disable(logging.DEBUG)
 logger=logging.getLogger()
-logger.info("")
+print("")
 sys.stderr.write=logger.error
 
 #Setting
@@ -74,28 +74,28 @@ def getFrames(camera_dirs):
 	return frames0, frames1, frames2
 
 def init():
-	logger.info('Loading TensoRT model...')
+	print('Loading TensoRT model...')
 	# build the class (index/name) dictionary from labelmap file
 	trt_yolo = TrtYOLO("yolov4x-mish-416", (416, 416), 4, False, path_folder = 'yolo/')
 
 	#print('\tRunning warmup detection')
 	dummy_img = np.zeros((416, 416, 3), dtype=np.uint8)
 	_, _, _ = trt_yolo.detect(dummy_img, 0.6)
-	logger.info('Model loaded and ready for detection')
+	print('Model loaded and ready for detection')
 
 	return trt_yolo
 
 def sms_text(tsv_url, post_time):
 	sms_response = requests.post(url= tsv_url, data='["CreateSMSText", "CV FRAUD ALERT: ({}): Transaction time threshold exceeded / {}sec {}"]'.format(cfg.machine_location, post_time, datetime.now().strftime("%c"))).json()
 	if sms_response['resultCode'] == "SUCCESS":
-		logger.info("   CV sms alert succesfully sent")
+		print("   CV sms alert succesfully sent")
 	else:
-		logger.info("   CV sms alert: Failed")
+		print("   CV sms alert: Failed")
 
 #RabbitMQ Initialization
 def initializeChannel():
 	#Initialize queue for door signal
-	credentials = pika.PlainCredentials('guest','guest')
+	credentials = pika.PlainCredentials('nano','nano')
 	parameters = pika.ConnectionParameters('localhost', 5672, '/', credentials, blocked_connection_timeout=3000)
 	connection = pika.BlockingConnection(parameters)
 	channel = connection.channel()
@@ -107,7 +107,7 @@ def initializeChannel():
 	channel.queue_purge(queue='cvIcount')
 	channel2.queue_purge(queue='cvPost')
 
-	logger.info("Rabbitmq connections initialized ")
+	print("Rabbitmq connections initialized ")
 	return channel, channel2, connection
 
 
@@ -326,12 +326,12 @@ def fuse_cam12_activities(cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2, 
 	if len(act_picks12) > 0:
 		for act_pick in act_picks12:
 			cv_activities_fused.append({'class_id': act_pick[0], 'action': act_pick[1], 'timestamp': act_pick[2]})
-			logger.info("   fused action: {} {} @ {}".format(act_pick[1], act_pick[0], act_pick[2]))
+			print("   fused action: {} {} @ {}".format(act_pick[1], act_pick[0], act_pick[2]))
 
 	if len(act_returns12) > 0:
 		for act_return in act_returns12:
 			cv_activities_fused.append({'class_id': act_return[0], 'action': act_return[1], 'timestamp': act_return[2]})
-			logger.info("   fused action: {} {} @ {}".format(act_return[1], act_return[0], act_return[2]))
+			print("   fused action: {} {} @ {}".format(act_return[1], act_return[0], act_return[2]))
 
 	return cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2
 
@@ -342,11 +342,11 @@ def fuse_all_cams_activities(matched_pick_cam01, matched_pick_cam02, matched_ret
 	if len(matched_act_picks012) > 0:
 		for act_pick in matched_act_picks012:
 			cv_activities_fused.append({'class_id': act_pick[0], 'action': act_pick[1], 'timestamp': act_pick[2]})
-			logger.info("   fused action: {} {} @ {}".format(act_pick[1], act_pick[0], act_pick[2]))
+			print("   fused action: {} {} @ {}".format(act_pick[1], act_pick[0], act_pick[2]))
 	if len(matched_act_returns012) > 0:
 		for act_return in matched_act_returns012:
 			cv_activities_fused.append({'class_id': act_return[0], 'action': act_return[1], 'timestamp': act_return[2]})
-			logger.info("   fused action: {} {} @ {}".format(act_return[1], act_return[0], act_return[2]))
+			print("   fused action: {} {} @ {}".format(act_return[1], act_return[0], act_return[2]))
 
 	return matched_pick_cam01, matched_pick_cam02, matched_return_cam01, matched_return_cam02
 
@@ -377,6 +377,7 @@ cv_activities = []
 check_list = [ False for i in range(maxCamerasToUse)]
 
 def main(transid):
+	print('begin main fxn')
 	#extract tfrecords
 	cam_ids = ['cam0', 'cam1', 'cam2']
 	for tfrecord_path, cam_id in zip(tfrecord_paths, cam_ids):
@@ -424,7 +425,7 @@ def main(transid):
 	clear_flag = 1
 
 	#************Run model on video************
-	logger.info('Running detections on stored video')
+	print('Running detections on stored video')
 	while True:
 		try:
 			if cameraContextValue == 0:
@@ -438,7 +439,7 @@ def main(transid):
 				frame_cnt2 += 1
 		except StopIteration:
 			door_state = 'DoorLocked'
-			logger.info('Reached end of video')	
+			print('Reached end of video')	
 			break
 
 		if cameraContextValue == 0:
@@ -499,17 +500,16 @@ def main(transid):
 				print(fps)
 		
 		#************Upload detections***********
-		logger.info
 		data = {"cmd": "Done", "transid": transid, "timestamp": time.strftime("%Y%m%d-%H_%M_%S"), "cv_activities": cv_activities, "ls_activities": ls_activities}
 		mess = json.dumps(data)
 		channel2.basic_publish(exchange='',
 					routing_key="cvPost",
 					body=mess)
 
-		logger.info('CV_activities:')
-		logger.info(cv_activities)
-		logger.info('LS_activities:')
-		logger.info(ls_activities)
+		print('CV_activities:')
+		print(cv_activities)
+		print('LS_activities:')
+		print(ls_activities)
 		if (len(cv_activities) > 0) or (len(ls_activities) > 0): #only send signal to postprocess if we have either a cv_activity or a ls_activity
 			if len(cv_activities) > 0:
 				cv_activities = sorted(cv_activities, key=lambda d: d['timestamp']) 
@@ -519,19 +519,22 @@ def main(transid):
 							routing_key="cvPost",
 							body=mess)
 			if icount_mode:
-				logger.info("Sent cvPost signal (Icount mode)\n")
+				print("Sent cvPost signal (Icount mode)\n")
 			else:
-				logger.info("Sent cvPost signal (Recording-only mode)\n")
+				print("Sent cvPost signal (Recording-only mode)\n")
 		else:
-			logger.info("No cvPost signal sent - no CV or LS activities")
+			print("No cvPost signal sent - no CV or LS activities")
 		door_state = 'initialize'
 		ls_activities = ""
 
 if __name__ == '__main__':
+	print('Starting Icount_lite on saved videos')
+	print('Running Icount_lite on saved videos')
 	#get user input transid (python3 icount_live_video.py --transid <transid>)
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--transid')
 	args = parser.parse_args()
 	transid = args.transid
+	print('Running on: ' + transid)
 
 	main(transid)
