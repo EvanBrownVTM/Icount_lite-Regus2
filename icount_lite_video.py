@@ -42,6 +42,7 @@ from utils_lite.side_cam_solver import SideCam
 from  utils_lite.utils import descale_contour
 from datetime import datetime
 from scipy.optimize import linear_sum_assignment
+from post_process import readTfRecords
 
 logging.getLogger("pika").setLevel(logging.WARNING)
 logging.getLogger('requests').setLevel(logging.WARNING)
@@ -376,6 +377,15 @@ cv_activities = []
 check_list = [ False for i in range(maxCamerasToUse)]
 
 def main(transid):
+	#extract tfrecords
+	cam_ids = ['cam0', 'cam1', 'cam2']
+	for tfrecord_path, cam_id in zip(tfrecord_paths, cam_ids):
+		readTFRecords(transid, cam_id, logger)
+
+	#load frames
+	camera_dirs = [os.path.join(cfg.base_path, 'archive', transid, x) for x in ['cam0', 'cam1', 'cam2']]
+	frames0, frames1, frames2 = getFrames(camera_dirs)
+
 	#initialize solvers
 	avt0 = AVT()
 	avt1 = AVT()
@@ -387,10 +397,6 @@ def main(transid):
 	cam0_solver = FrontCam('cam0', cfg.cam0_zone)
 	cam1_solver = SideCam('cam1', cfg.cam1_zone)
 	cam2_solver = SideCam('cam2', cfg.cam2_zone)
-	
-	#load frames
-	camera_dirs = [os.path.join(cfg.base_path, 'archive', transid, x) for x in ['cam0', 'cam1', 'cam2']]
-	frames0, frames1, frames2 = getFrames(camera_dirs)
 
 	#initialize variables
 	door_state = "DoorOpened"
@@ -522,12 +528,10 @@ def main(transid):
 		ls_activities = ""
 
 if __name__ == '__main__':
-	#get user input transid
+	#get user input transid (python3 icount_live_video.py --transid <transid>)
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--transid')
 	args = parser.parse_args()
-	print(args)
 	transid = args.transid
-	print(transid)
 
 	main(transid)

@@ -145,7 +145,7 @@ def parse(serialized):
 
 
 #parse tfrecords to jpg's
-def readTfRecords(transid, cam_id):
+def readTfRecords(transid, cam_id, logger):
 	dataset = tf.data.TFRecordDataset(["{}archive/{}/img_{}.tfrecords".format(cfg.base_path, transid, cam_id[-1])])
 	dataset = dataset.map(parse)
 	iterator = dataset.make_one_shot_iterator()
@@ -382,7 +382,7 @@ def postprocess(transid, base_url, headers, cv_activities, ls_activities):
 	logger.info("      Extracting TFRecords")
 	#Extracting cam 0
 	if os.path.isfile("{}archive/{}/img_0.tfrecords".format(cfg.base_path, transid)):
-		readTfRecords(transid, 'cam0')
+		readTfRecords(transid, 'cam0', logger)
 	else:
 		logger.info("      Cam 0 TFRecord no available")
 		return
@@ -390,13 +390,13 @@ def postprocess(transid, base_url, headers, cv_activities, ls_activities):
 	if os.path.isfile("{}archive/{}/img_1.tfrecords".format(cfg.base_path, transid)):
 		readTfRecords(transid, 'cam1')
 	else:
-		logger.info("      Cam 1 TFRecord no available")
+		logger.info("      Cam 1 TFRecord no available", logger)
 		return
 	#Extracting cam 2
 	if os.path.isfile("{}archive/{}/img_2.tfrecords".format(cfg.base_path, transid)):
 		readTfRecords(transid, 'cam2')
 	else:
-		logger.info("      Cam 2 TFRecord no available")
+		logger.info("      Cam 2 TFRecord no available", logger)
 		return
 
 
