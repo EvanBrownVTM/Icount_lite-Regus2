@@ -389,7 +389,7 @@ def main(transid):
 	cam2_solver = SideCam('cam2', cfg.cam2_zone)
 	
 	#load frames
-	camera_dirs = [os.path.join(base_path, 'archive', x) for x in ['cam0', 'cam1', 'cam2']]
+	camera_dirs = [os.path.join(cfg.base_path, 'archive', transid, x) for x in ['cam0', 'cam1', 'cam2']]
 	frames0, frames1, frames2 = getFrames(camera_dirs)
 
 	#initialize variables
@@ -525,7 +525,7 @@ if __name__ == '__main__':
 	#get user input transid
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--transid')
-	args = parser.parse_known_args()
+	args = parser.parse_args()
 	print(args)
 	transid = args.transid
 	print(transid)
