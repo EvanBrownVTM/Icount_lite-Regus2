@@ -83,7 +83,7 @@ def parse(serialized):
 	image = tf.io.decode_image(image)
 
 	return {'image':image, 'timestamp':timestamp} #, 'frame_cnt': frame_cnt}
-def readSingleTFRecord(n_cam, archive_size):
+def readSingleTFRecord(sess, n_cam, archive_size):
 	if not os.path.exists("{base_path}archive/{archive_name}/cam{n_cam}".format(base_path = cfg.base_path, archive_name=transid, n_cam=n_cam)):
 		os.mkdir("{base_path}archive/{archive_name}/cam{n_cam}".format(base_path=cfg.base_path, archive_name=transid, n_cam=n_cam))
 	
@@ -93,8 +93,7 @@ def readSingleTFRecord(n_cam, archive_size):
 	frame_cnt = 0
 	while True: #TEMPORARY and frame_cnt < 100 
 		try:
-			next_element = iterator.get_next()
-			img = next_element['image'].numpy()
+			img, _ = sess.run([next_element['image'], next_element['timestamp']])
 			cv2.imwrite('{base_path}archive/{archive_name}/cam{n_cam}/{frame_cnt}.jpg'.format(base_path=cfg.base_path, archive_name=transid, n_cam=n_cam, frame_cnt=frame_cnt), img)
 			# cv2.imshow('cam{}'.format(n_cam), img)
 			# cv2.waitKey(1)
@@ -106,11 +105,11 @@ def readSingleTFRecord(n_cam, archive_size):
 	return frame_cnt
 
 #parse tfrecords to jpg's
-def readTfRecords(archive_name, archive_size, total_n_cams, logger):
+def readTfRecords(sess, archive_name, archive_size, total_n_cams, logger):
 	frame_cnts = []
 	print('Beginning extraction: ', archive_name)
 	for n_cam in range(total_n_cams):
-		frame_cnts.append(readSingleTFRecord(n_cam, archive_size))
+		frame_cnts.append(readSingleTFRecord(sess, n_cam, archive_size))
 
 	print('Extracted frames from [{total_n_cams}] cameras: '.format(total_n_cams = total_n_cams) + " ".join([str(x) for x in frame_cnts]))
 		
@@ -427,8 +426,10 @@ check_list = [ False for i in range(maxCamerasToUse)]
 def main(transid):
 	print('begin main fxn')
 	#extract tfrecords
-
-	readTfRecords(transid, archive_size, cfg.maxCamerasToUse, logger)
+	config = tf.ConfigProto()
+	config.gpu_options.allow_growth=True
+	sess = tf.Session(config=config)
+	readTfRecords(sess, transid, archive_size, cfg.maxCamerasToUse, logger)
 
 	#load frames
 	camera_dirs = [os.path.join(cfg.base_path, 'archive', transid, x) for x in ['cam0', 'cam1', 'cam2']]
