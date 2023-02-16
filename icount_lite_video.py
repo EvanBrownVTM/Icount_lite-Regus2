@@ -169,7 +169,7 @@ def displayCart(det_frame, cart):
 		if cart[prod_ind] != 0:
 			cv2.putText(det_frame, "{}:{}".format(cls_dict[prod_ind], cart[prod_ind]), (0, 50  + 30 * cnt), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
 			cnt += 1
-def infer_engine(timestr, frame0, frame1, frame2, frame_cnt0, frame_cnt1, frame_cnt2, cv_activities_cam0, cv_activities_cam1, cv_activities_cam2, cv_pick_cam0, cv_ret_cam0, cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2):
+def infer_engine(trt_yolo, cam0_solver, cam1_solver, cam2_solver, avt0, avt1, avt2, vis, timestr, frame0, frame1, frame2, frame_cnt0, frame_cnt1, frame_cnt2, cv_activities_cam0, cv_activities_cam1, cv_activities_cam2, cv_pick_cam0, cv_ret_cam0, cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2):
 	frame0_copy = frame0.copy()
 	frame1_copy = frame1.copy()
 	frame2_copy = frame2.copy()
@@ -363,18 +363,6 @@ def img2jpeg(image):
 
 _, channel2, connection = initializeChannel()
 
-#initialize solvers
-avt0 = AVT()
-avt1 = AVT()
-avt2 = AVT()
-
-trt_yolo = init()
-vis = BBoxVisualization(cls_dict)
-
-cam0_solver = FrontCam('cam0', cfg.cam0_zone)
-cam1_solver = SideCam('cam1', cfg.cam1_zone)
-cam2_solver = SideCam('cam2', cfg.cam2_zone)
-
 #intialize variables
 tic = time.time()
 
@@ -388,6 +376,18 @@ cv_activities = []
 check_list = [ False for i in range(maxCamerasToUse)]
 
 def main(transid):
+	#initialize solvers
+	avt0 = AVT()
+	avt1 = AVT()
+	avt2 = AVT()
+
+	trt_yolo = init()
+	vis = BBoxVisualization(cls_dict)
+
+	cam0_solver = FrontCam('cam0', cfg.cam0_zone)
+	cam1_solver = SideCam('cam1', cfg.cam1_zone)
+	cam2_solver = SideCam('cam2', cfg.cam2_zone)
+	
 	#load frames
 	camera_dirs = [os.path.join(base_path, 'archive', x) for x in ['cam0', 'cam1', 'cam2']]
 	frames0, frames1, frames2 = getFrames(camera_dirs)
@@ -463,7 +463,7 @@ def main(transid):
 			check_list = np.logical_not(check_list)
 
 			if icount_mode:
-				det_frame0, det_frame1, det_frame2, cart = infer_engine(timestr, frame0, frame1, frame2, frame_cnt0, frame_cnt1, frame_cnt2, cv_activities_cam0, cv_activities_cam1, cv_activities_cam2, cv_pick_cam0, cv_ret_cam0, cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2)
+				det_frame0, det_frame1, det_frame2, cart = infer_engine(trt_yolo, cam0_solver, cam1_solver, cam2_solver, avt0, avt1, avt2, vis, timestr, frame0, frame1, frame2, frame_cnt0, frame_cnt1, frame_cnt2, cv_activities_cam0, cv_activities_cam1, cv_activities_cam2, cv_pick_cam0, cv_ret_cam0, cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2)
 				#Performing simple inference / cam2 only
 				cv_activities = cv_activities_cam2 + cv_activities_cam0 + cv_activities_cam1
 
