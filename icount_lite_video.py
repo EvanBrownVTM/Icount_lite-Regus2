@@ -39,10 +39,11 @@ from utils.visualization_ic import BBoxVisualization
 from utils_lite.tracker import AVT
 from utils_lite.front_cam_solver import FrontCam
 from utils_lite.side_cam_solver import SideCam
-from  utils_lite.utils import descale_contour
+from utils_lite.utils import descale_contour
 from datetime import datetime
 from scipy.optimize import linear_sum_assignment
-from post_process import readTfRecords
+
+print("TEST")
 
 logging.getLogger("pika").setLevel(logging.WARNING)
 logging.getLogger('requests').setLevel(logging.WARNING)
@@ -66,11 +67,58 @@ tsv_url = 'http://192.168.1.140:8085/tsv/flashapi'
 timestamp_format = "%Y%m%d-%H_%M_%S"
 fps = 0.0
 conf_th = 0.7
+#parser for tfrecords
+def parse(serialized):
+	features = \
+	{
+	'bytes': tf.io.FixedLenFeature([], tf.string),
+	'timestamp': tf.io.FixedLenFeature([], tf.string),
+	#'frame_cnt': tf.io.FixedLenFeature([], tf.string)
+	}
+
+	parsed_example = tf.io.parse_single_example(serialized=serialized,features=features)
+	image = parsed_example['bytes']
+	timestamp = parsed_example['timestamp']
+	#frame_cnt = parsed_example['frame_cnt']
+	image = tf.io.decode_image(image)
+
+	return {'image':image, 'timestamp':timestamp} #, 'frame_cnt': frame_cnt}
+def readSingleTFRecord(n_cam, archive_size):
+	if not os.path.exists("{base_path}archive/{archive_name}/cam{n_cam}".format(base_path = cfg.base_path, archive_name=transid, n_cam=n_cam)):
+		os.mkdir("{base_path}archive/{archive_name}/cam{n_cam}".format(base_path=cfg.base_path, archive_name=transid, n_cam=n_cam))
+	
+	dataset = tf.data.TFRecordDataset(["{base_path}archive/{archive_name}/img_{n_cam}.tfrecords".format(base_path=cfg.base_path, archive_name=transid, n_cam=n_cam)])
+	dataset = dataset.map(parse)
+	iterator = iter(dataset)
+	frame_cnt = 0
+	while True: #TEMPORARY and frame_cnt < 100 
+		try:
+			next_element = iterator.get_next()
+			img = next_element['image'].numpy()
+			cv2.imwrite('{base_path}archive/{archive_name}/cam{n_cam}/{frame_cnt}.jpg'.format(base_path=cfg.base_path, archive_name=transid, n_cam=n_cam, frame_cnt=frame_cnt), img)
+			# cv2.imshow('cam{}'.format(n_cam), img)
+			# cv2.waitKey(1)
+			frame_cnt += 1
+			print(frame_cnt)
+		except tf.errors.OutOfRangeError:
+			break
+	# cv2.destroyAllWindows()
+	return frame_cnt
+
+#parse tfrecords to jpg's
+def readTfRecords(archive_name, archive_size, total_n_cams, logger):
+	frame_cnts = []
+	print('Beginning extraction: ', archive_name)
+	for n_cam in range(total_n_cams):
+		frame_cnts.append(readSingleTFRecord(n_cam, archive_size))
+
+	print('Extracted frames from [{total_n_cams}] cameras: '.format(total_n_cams = total_n_cams) + " ".join([str(x) for x in frame_cnts]))
+		
 
 def getFrames(camera_dirs):
-	frames0 = iter([Image.open(os.path.join(camera_dirs[0],f)) for f in sorted(os.listdir(camera_dirs[0]))])
-	frames1 = iter([Image.open(os.path.join(camera_dirs[1],f)) for f in sorted(os.listdir(camera_dirs[1]))])
-	frames2 = iter([Image.open(os.path.join(camera_dirs[2],f)) for f in sorted(os.listdir(camera_dirs[2]))])
+	frames0 = iter([Image.open(os.path.join(camera_dirs[0],f)) for f in sorted(os.listdir(camera_dirs[0])) if f.endswith('.jpg')])
+	frames1 = iter([Image.open(os.path.join(camera_dirs[1],f)) for f in sorted(os.listdir(camera_dirs[1]))if f.endswith('.jpg')])
+	frames2 = iter([Image.open(os.path.join(camera_dirs[2],f)) for f in sorted(os.listdir(camera_dirs[2]))if f.endswith('.jpg')])
 	return frames0, frames1, frames2
 
 def init():
@@ -95,7 +143,7 @@ def sms_text(tsv_url, post_time):
 #RabbitMQ Initialization
 def initializeChannel():
 	#Initialize queue for door signal
-	credentials = pika.PlainCredentials('nano','nano')
+	credentials = pika.PlainCredentials('guest','guest')
 	parameters = pika.ConnectionParameters('localhost', 5672, '/', credentials, blocked_connection_timeout=3000)
 	connection = pika.BlockingConnection(parameters)
 	channel = connection.channel()
@@ -379,9 +427,8 @@ check_list = [ False for i in range(maxCamerasToUse)]
 def main(transid):
 	print('begin main fxn')
 	#extract tfrecords
-	cam_ids = ['cam0', 'cam1', 'cam2']
-	for tfrecord_path, cam_id in zip(tfrecord_paths, cam_ids):
-		readTFRecords(transid, cam_id, logger)
+
+	readTfRecords(transid, archive_size, cfg.maxCamerasToUse, logger)
 
 	#load frames
 	camera_dirs = [os.path.join(cfg.base_path, 'archive', transid, x) for x in ['cam0', 'cam1', 'cam2']]
@@ -418,12 +465,13 @@ def main(transid):
 	matched_return_cam01 = []
 	matched_pick_cam02 = []
 	matched_return_cam02 = []
-
 	cv_activities = []
-	ls_activities = []
-					
+	ls_activities = []					
 	clear_flag = 1
-
+	cameraContextValue = 0
+	check_list = [None] * cfg.maxCamerasToUse
+	tic = time.time()
+	fps = 0.0
 	#************Run model on video************
 	print('Running detections on stored video')
 	while True:
@@ -469,15 +517,14 @@ def main(transid):
 			timestr = time.strftime(timestamp_format)
 			check_list = np.logical_not(check_list)
 
-			if icount_mode:
-				det_frame0, det_frame1, det_frame2, cart = infer_engine(trt_yolo, cam0_solver, cam1_solver, cam2_solver, avt0, avt1, avt2, vis, timestr, frame0, frame1, frame2, frame_cnt0, frame_cnt1, frame_cnt2, cv_activities_cam0, cv_activities_cam1, cv_activities_cam2, cv_pick_cam0, cv_ret_cam0, cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2)
-				#Performing simple inference / cam2 only
-				cv_activities = cv_activities_cam2 + cv_activities_cam0 + cv_activities_cam1
+			det_frame0, det_frame1, det_frame2, cart = infer_engine(trt_yolo, cam0_solver, cam1_solver, cam2_solver, avt0, avt1, avt2, vis, timestr, frame0, frame1, frame2, frame_cnt0, frame_cnt1, frame_cnt2, cv_activities_cam0, cv_activities_cam1, cv_activities_cam2, cv_pick_cam0, cv_ret_cam0, cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2)
+			#Performing simple inference / cam2 only
+			cv_activities = cv_activities_cam2 + cv_activities_cam0 + cv_activities_cam1
 
-				#cv_pick_cam0, cv_ret_cam0, cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2 = fuse_cam01_02_activities(cv_pick_cam0, cv_ret_cam0, cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2, \
-				#																									matched_pick_cam01, matched_return_cam01, matched_pick_cam02, matched_return_cam02)
-				#cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2 = fuse_cam12_activities(cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2, cv_activities)matched_return_cam01,
-				#matched_pick_cam01, matched_pick_cam02, matched_return_cam01, matched_return_cam02 = fuse_all_cams_activities(matched_pick_cam01, matched_pick_cam02, matched_return_cam01, matched_return_cam02, cv_activities)
+			#cv_pick_cam0, cv_ret_cam0, cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2 = fuse_cam01_02_activities(cv_pick_cam0, cv_ret_cam0, cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2, \
+			#																									matched_pick_cam01, matched_return_cam01, matched_pick_cam02, matched_return_cam02)
+			#cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2 = fuse_cam12_activities(cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2, cv_activities)matched_return_cam01,
+			#matched_pick_cam01, matched_pick_cam02, matched_return_cam01, matched_return_cam02 = fuse_all_cams_activities(matched_pick_cam01, matched_pick_cam02, matched_return_cam01, matched_return_cam02, cv_activities)
 
 			if display_mode:
 				img_hstack = det_frame0
@@ -499,33 +546,30 @@ def main(transid):
 			if frame_cnt0 % 20 == 0:
 				print(fps)
 		
-		#************Upload detections***********
+	#************Upload detections***********
+	data = {"cmd": "Done", "transid": transid, "timestamp": time.strftime("%Y%m%d-%H_%M_%S"), "cv_activities": cv_activities, "ls_activities": ls_activities}
+	mess = json.dumps(data)
+	channel2.basic_publish(exchange='',
+				routing_key="cvPost",
+				body=mess)
+
+	print('CV_activities:')
+	print(cv_activities)
+	print('LS_activities:')
+	print(ls_activities)
+	if (len(cv_activities) > 0) or (len(ls_activities) > 0): #only send signal to postprocess if we have either a cv_activity or a ls_activity
+		if len(cv_activities) > 0:
+			cv_activities = sorted(cv_activities, key=lambda d: d['timestamp']) 
 		data = {"cmd": "Done", "transid": transid, "timestamp": time.strftime("%Y%m%d-%H_%M_%S"), "cv_activities": cv_activities, "ls_activities": ls_activities}
 		mess = json.dumps(data)
 		channel2.basic_publish(exchange='',
-					routing_key="cvPost",
-					body=mess)
-
-		print('CV_activities:')
-		print(cv_activities)
-		print('LS_activities:')
-		print(ls_activities)
-		if (len(cv_activities) > 0) or (len(ls_activities) > 0): #only send signal to postprocess if we have either a cv_activity or a ls_activity
-			if len(cv_activities) > 0:
-				cv_activities = sorted(cv_activities, key=lambda d: d['timestamp']) 
-			data = {"cmd": "Done", "transid": transid, "timestamp": time.strftime("%Y%m%d-%H_%M_%S"), "cv_activities": cv_activities, "ls_activities": ls_activities}
-			mess = json.dumps(data)
-			channel2.basic_publish(exchange='',
-							routing_key="cvPost",
-							body=mess)
-			if icount_mode:
-				print("Sent cvPost signal (Icount mode)\n")
-			else:
-				print("Sent cvPost signal (Recording-only mode)\n")
-		else:
-			print("No cvPost signal sent - no CV or LS activities")
-		door_state = 'initialize'
-		ls_activities = ""
+						routing_key="cvPost",
+						body=mess)
+		print("Sent cvPost signal (Stored video mode)\n")
+	else:
+		print("No cvPost signal sent - no CV or LS activities")
+	door_state = 'initialize'
+	ls_activities = ""
 
 if __name__ == '__main__':
 	print('Starting Icount_lite on saved videos')
