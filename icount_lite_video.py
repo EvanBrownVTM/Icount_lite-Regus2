@@ -39,10 +39,10 @@ from utils.visualization_ic import BBoxVisualization
 from utils_lite.tracker import AVT
 from utils_lite.front_cam_solver import FrontCam
 from utils_lite.side_cam_solver import SideCam
-from  utils_lite.utils import descale_contour
+from utils_lite.utils import descale_contour
 from datetime import datetime
 from scipy.optimize import linear_sum_assignment
-from post_process import readTfRecords
+
 
 logging.getLogger("pika").setLevel(logging.WARNING)
 logging.getLogger('requests').setLevel(logging.WARNING)
@@ -60,23 +60,84 @@ save_size = cfg.save_size
 display_mode = cfg.display_mode
 pika_flag = cfg.pika_flag
 cls_dict = cfg.cls_dict
+show_contours = cfg.show_contours
+model_name = cfg.model_name
 
 #Initialization
 tsv_url = 'http://192.168.1.140:8085/tsv/flashapi'
 timestamp_format = "%Y%m%d-%H_%M_%S"
 fps = 0.0
 conf_th = 0.7
+def draw_contours(img, contours, frame_size):
+	for zone in contours.files:
+		absolute_zone = np.int32(contours[zone] * frame_size) #denormalize the contour
+		cv2.drawContours(img, absolute_zone, -1, (0,0,255), 2)
+#parser for tfrecords
+def parse(serialized):
+	features = \
+	{
+	'bytes': tf.io.FixedLenFeature([], tf.string),
+	'timestamp': tf.io.FixedLenFeature([], tf.string),
+	#'frame_cnt': tf.io.FixedLenFeature([], tf.string)
+	}
+
+	parsed_example = tf.io.parse_single_example(serialized=serialized,features=features)
+	image = parsed_example['bytes']
+	timestamp = parsed_example['timestamp']
+	#frame_cnt = parsed_example['frame_cnt']
+	image = tf.io.decode_image(image)
+
+	return {'image':image, 'timestamp':timestamp} #, 'frame_cnt': frame_cnt}
+def readSingleTFRecord(n_cam, archive_size):
+	if not os.path.exists("{base_path}archive/{archive_name}/cam{n_cam}".format(base_path = cfg.base_path, archive_name=transid, n_cam=n_cam)):
+		os.mkdir("{base_path}archive/{archive_name}/cam{n_cam}".format(base_path=cfg.base_path, archive_name=transid, n_cam=n_cam))
+	
+	dataset = tf.data.TFRecordDataset(["{base_path}archive/{archive_name}/img_{n_cam}.tfrecords".format(base_path=cfg.base_path, archive_name=transid, n_cam=n_cam)])
+	dataset = dataset.map(parse)
+	iterator = iter(dataset)
+	frame_cnt = 0
+	while True and frame_cnt < 100: #TEMPORARY and frame_cnt < 100
+		try:
+			next_element = iterator.get_next()
+			img = next_element['image'].numpy()
+			cv2.imwrite('{base_path}archive/{archive_name}/cam{n_cam}/{frame_cnt}.jpg'.format(base_path=cfg.base_path, archive_name=transid, n_cam=n_cam, frame_cnt=frame_cnt), img)
+			# cv2.imshow('cam{}'.format(n_cam), img)
+			# cv2.waitKey(1)
+			frame_cnt += 1
+			print(frame_cnt)
+		except tf.errors.OutOfRangeError:
+			break
+	# cv2.destroyAllWindows()
+	return frame_cnt
+
+#parse tfrecords to jpg's
+def readTfRecords(archive_name, archive_size, total_n_cams, logger):
+	frame_cnts = []
+	print('Beginning extraction: ', archive_name)
+	for n_cam in range(total_n_cams):
+		frame_cnts.append(readSingleTFRecord(n_cam, archive_size))
+
+	print('Extracted frames from [{total_n_cams}] cameras: '.format(total_n_cams = total_n_cams) + " ".join([str(x) for x in frame_cnts]))
+		
+def sort_fxn(x):
+    x = x.replace('.jpg', '')
+    return int(x)
 
 def getFrames(camera_dirs):
-	frames0 = iter([Image.open(os.path.join(camera_dirs[0],f)) for f in sorted(os.listdir(camera_dirs[0]))])
-	frames1 = iter([Image.open(os.path.join(camera_dirs[1],f)) for f in sorted(os.listdir(camera_dirs[1]))])
-	frames2 = iter([Image.open(os.path.join(camera_dirs[2],f)) for f in sorted(os.listdir(camera_dirs[2]))])
-	return frames0, frames1, frames2
+	frames_list = []
+	for camera_dir in camera_dirs:
+		image_list = os.listdir(camera_dirs[0])
+		image_list = [f for f in image_list if f.endswith('.jpg')]
+		image_list.sort(key=sort_fxn)
+		image_list = [Image.open(os.path.join(camera_dir,f)) for f in image_list]
+		image_list = iter(image_list)
+		frames_list.append(image_list)
+	return (*frames_list,)
 
 def init():
 	print('Loading TensoRT model...')
 	# build the class (index/name) dictionary from labelmap file
-	trt_yolo = TrtYOLO("yolov4x-mish-416", (416, 416), 4, False, path_folder = 'yolo/')
+	trt_yolo = TrtYOLO(model_name, (416, 416), 4, False, path_folder = 'yolo/')
 
 	#print('\tRunning warmup detection')
 	dummy_img = np.zeros((416, 416, 3), dtype=np.uint8)
@@ -95,7 +156,7 @@ def sms_text(tsv_url, post_time):
 #RabbitMQ Initialization
 def initializeChannel():
 	#Initialize queue for door signal
-	credentials = pika.PlainCredentials('nano','nano')
+	credentials = pika.PlainCredentials('guest','guest')
 	parameters = pika.ConnectionParameters('localhost', 5672, '/', credentials, blocked_connection_timeout=3000)
 	connection = pika.BlockingConnection(parameters)
 	channel = connection.channel()
@@ -170,6 +231,7 @@ def displayCart(det_frame, cart):
 		if cart[prod_ind] != 0:
 			cv2.putText(det_frame, "{}:{}".format(cls_dict[prod_ind], cart[prod_ind]), (0, 50  + 30 * cnt), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
 			cnt += 1
+	
 def infer_engine(trt_yolo, cam0_solver, cam1_solver, cam2_solver, avt0, avt1, avt2, vis, timestr, frame0, frame1, frame2, frame_cnt0, frame_cnt1, frame_cnt2, cv_activities_cam0, cv_activities_cam1, cv_activities_cam2, cv_pick_cam0, cv_ret_cam0, cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2):
 	frame0_copy = frame0.copy()
 	frame1_copy = frame1.copy()
@@ -372,16 +434,14 @@ frame_cnt0 = 0
 frame_cnt1 = 0
 frame_cnt2 = 0
 
-transid = 'trans_init'
 cv_activities = []
 check_list = [ False for i in range(maxCamerasToUse)]
 
 def main(transid):
 	print('begin main fxn')
 	#extract tfrecords
-	cam_ids = ['cam0', 'cam1', 'cam2']
-	for tfrecord_path, cam_id in zip(tfrecord_paths, cam_ids):
-		readTFRecords(transid, cam_id, logger)
+
+	readTfRecords(transid, archive_size, cfg.maxCamerasToUse, logger)
 
 	#load frames
 	camera_dirs = [os.path.join(cfg.base_path, 'archive', transid, x) for x in ['cam0', 'cam1', 'cam2']]
@@ -398,6 +458,11 @@ def main(transid):
 	cam0_solver = FrontCam('cam0', cfg.cam0_zone)
 	cam1_solver = SideCam('cam1', cfg.cam1_zone)
 	cam2_solver = SideCam('cam2', cfg.cam2_zone)
+
+	#load contours
+	contours0 = np.load(cfg.cam0_zone, allow_pickle=True)
+	contours1 = np.load(cfg.cam1_zone, allow_pickle=True)
+	contours2 = np.load(cfg.cam2_zone, allow_pickle=True)
 
 	#initialize variables
 	door_state = "DoorOpened"
@@ -418,11 +483,15 @@ def main(transid):
 	matched_return_cam01 = []
 	matched_pick_cam02 = []
 	matched_return_cam02 = []
-
 	cv_activities = []
-	ls_activities = []
-					
+	ls_activities = []					
 	clear_flag = 1
+	cameraContextValue = 0
+	check_list = [None] * cfg.maxCamerasToUse
+	tic = time.time()
+	fps = 0.0
+	fourcc = cv2.VideoWriter_fourcc(*'XVID')
+	out = cv2.VideoWriter('videos/' + model_name + '_' + transid + '.avi', fourcc, 20.0, (416*3,416))
 
 	#************Run model on video************
 	print('Running detections on stored video')
@@ -449,12 +518,12 @@ def main(transid):
 		elif cameraContextValue == 1:
 			frame_cnt1 += 1
 			frame1 = cv2.resize(np.uint8(frame), (archive_size, archive_size))
-			frame1 = cv2.rotate(frame1, cv2.ROTATE_90_COUNTERCLOCKWISE)
+			# frame1 = cv2.rotate(frame1, cv2.ROTATE_90_COUNTERCLOCKWISE)
 			check_list[1] = True
 		else:
 			frame_cnt2 += 1
 			frame2 = cv2.resize(np.uint8(frame), (archive_size, archive_size))
-			frame2 = cv2.rotate(frame2, cv2.ROTATE_90_COUNTERCLOCKWISE)
+			# frame2 = cv2.rotate(frame2, cv2.ROTATE_90_COUNTERCLOCKWISE)
 			check_list[2] = True
 						
 		if cameraContextValue == 0:
@@ -469,25 +538,27 @@ def main(transid):
 			timestr = time.strftime(timestamp_format)
 			check_list = np.logical_not(check_list)
 
-			if icount_mode:
-				det_frame0, det_frame1, det_frame2, cart = infer_engine(trt_yolo, cam0_solver, cam1_solver, cam2_solver, avt0, avt1, avt2, vis, timestr, frame0, frame1, frame2, frame_cnt0, frame_cnt1, frame_cnt2, cv_activities_cam0, cv_activities_cam1, cv_activities_cam2, cv_pick_cam0, cv_ret_cam0, cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2)
-				#Performing simple inference / cam2 only
-				cv_activities = cv_activities_cam2 + cv_activities_cam0 + cv_activities_cam1
+			det_frame0, det_frame1, det_frame2, cart = infer_engine(trt_yolo, cam0_solver, cam1_solver, cam2_solver, avt0, avt1, avt2, vis, timestr, frame0, frame1, frame2, frame_cnt0, frame_cnt1, frame_cnt2, cv_activities_cam0, cv_activities_cam1, cv_activities_cam2, cv_pick_cam0, cv_ret_cam0, cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2)
+			#Performing simple inference / cam2 only
+			cv_activities = cv_activities_cam2 + cv_activities_cam0 + cv_activities_cam1
 
-				#cv_pick_cam0, cv_ret_cam0, cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2 = fuse_cam01_02_activities(cv_pick_cam0, cv_ret_cam0, cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2, \
-				#																									matched_pick_cam01, matched_return_cam01, matched_pick_cam02, matched_return_cam02)
-				#cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2 = fuse_cam12_activities(cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2, cv_activities)matched_return_cam01,
-				#matched_pick_cam01, matched_pick_cam02, matched_return_cam01, matched_return_cam02 = fuse_all_cams_activities(matched_pick_cam01, matched_pick_cam02, matched_return_cam01, matched_return_cam02, cv_activities)
+			#cv_pick_cam0, cv_ret_cam0, cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2 = fuse_cam01_02_activities(cv_pick_cam0, cv_ret_cam0, cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2, \
+			#																									matched_pick_cam01, matched_return_cam01, matched_pick_cam02, matched_return_cam02)
+			#cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2 = fuse_cam12_activities(cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2, cv_activities)matched_return_cam01,
+			#matched_pick_cam01, matched_pick_cam02, matched_return_cam01, matched_return_cam02 = fuse_all_cams_activities(matched_pick_cam01, matched_pick_cam02, matched_return_cam01, matched_return_cam02, cv_activities)
 
 			if display_mode:
+				if show_contours:
+						for img, contours in zip([det_frame0, det_frame1, det_frame2], [contours0, contours1, contours2]):
+							draw_contours(img, contours, archive_size)
 				img_hstack = det_frame0
 				img_hstack = np.hstack((img_hstack, det_frame1))
 				img_hstack = np.hstack((img_hstack, det_frame2))
 				img_hstack = show_fps(img_hstack, fps)
 				displayCart(img_hstack, cart)
-
-				cv2.imshow('Yo', img_hstack[:,:,::-1])
-
+				img_hstack = cv2.cvtColor(img_hstack, cv2.COLOR_BGR2RGB)
+				out.write(img_hstack)
+				cv2.imshow('Yo', img_hstack)
 				key = cv2.waitKey(1)
 				if key == 27:  # ESC key: quit program
 					break
@@ -498,34 +569,32 @@ def main(transid):
 			tic = toc
 			if frame_cnt0 % 20 == 0:
 				print(fps)
-		
-		#************Upload detections***********
+	out.release()
+	#************Upload detections***********
+	data = {"cmd": "Done", "transid": transid, "timestamp": time.strftime("%Y%m%d-%H_%M_%S"), "cv_activities": cv_activities, "ls_activities": ls_activities}
+	mess = json.dumps(data)
+	channel2.basic_publish(exchange='',
+				routing_key="cvPost",
+				body=mess)
+
+	print('CV_activities:')
+	print(cv_activities)
+	print('LS_activities:')
+	print(ls_activities)
+	if (len(cv_activities) > 0) or (len(ls_activities) > 0): #only send signal to postprocess if we have either a cv_activity or a ls_activity
+		if len(cv_activities) > 0:
+			cv_activities = sorted(cv_activities, key=lambda d: d['timestamp']) 
 		data = {"cmd": "Done", "transid": transid, "timestamp": time.strftime("%Y%m%d-%H_%M_%S"), "cv_activities": cv_activities, "ls_activities": ls_activities}
 		mess = json.dumps(data)
 		channel2.basic_publish(exchange='',
-					routing_key="cvPost",
-					body=mess)
-
-		print('CV_activities:')
-		print(cv_activities)
-		print('LS_activities:')
-		print(ls_activities)
-		if (len(cv_activities) > 0) or (len(ls_activities) > 0): #only send signal to postprocess if we have either a cv_activity or a ls_activity
-			if len(cv_activities) > 0:
-				cv_activities = sorted(cv_activities, key=lambda d: d['timestamp']) 
-			data = {"cmd": "Done", "transid": transid, "timestamp": time.strftime("%Y%m%d-%H_%M_%S"), "cv_activities": cv_activities, "ls_activities": ls_activities}
-			mess = json.dumps(data)
-			channel2.basic_publish(exchange='',
-							routing_key="cvPost",
-							body=mess)
-			if icount_mode:
-				print("Sent cvPost signal (Icount mode)\n")
-			else:
-				print("Sent cvPost signal (Recording-only mode)\n")
-		else:
-			print("No cvPost signal sent - no CV or LS activities")
-		door_state = 'initialize'
-		ls_activities = ""
+						routing_key="cvPost",
+						body=mess)
+		print("Sent cvPost signal (Stored video mode)\n")
+	else:
+		print("No cvPost signal sent - no CV or LS activities")
+	door_state = 'initialize'
+	ls_activities = ""
+	del trt_yolo
 
 if __name__ == '__main__':
 	print('Starting Icount_lite on saved videos')
@@ -533,8 +602,15 @@ if __name__ == '__main__':
 	#get user input transid (python3 icount_live_video.py --transid <transid>)
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--transid')
-	args = parser.parse_args()
+	args, leftovers = parser.parse_known_args()
 	transid = args.transid
-	print('Running on: ' + transid)
-
-	main(transid)
+	if transid is not None:
+		#run on user-supplied transid
+		print('Running on: ' + transid)
+		main(transid)
+	else:
+		#run on all transactions in archive
+		transids = os.listdir('archive')
+		print('Running on: ' + ' '.join(transids))
+		for transid in transids:
+			main(transid)

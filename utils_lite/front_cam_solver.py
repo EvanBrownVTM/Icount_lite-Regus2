@@ -213,7 +213,7 @@ class FrontCam:
 		product = self._tracks[obj_id]
 		#print(product.is_added, obj_id, product._min_cent)
 		#print(len(product._prod_hist))
-		if len(product._prod_hist) < 5 or product._min_cent > 240:
+		if len(product._prod_hist) < 3 or product._min_cent > 240:
 			return
 			
 		movement_vector = calculate_average_movement_vector(product._prod_hist)

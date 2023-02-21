@@ -40,7 +40,7 @@ import configSrc as cfg
 
 import configSrc as cfg
 
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 import requests
 import moviepy.video.io.ImageSequenceClip
 from datetime import datetime
