@@ -6,6 +6,7 @@ import time
 import sys
 sys.path.insert(0, '..')
 from configSrc import cls_dict
+import configSrc as cfg
 
 timestamp_format = "%Y-%m-%d:%H:%M:%S"
 
@@ -139,7 +140,7 @@ class SideCam:
 	def __init__(self, cam_id, zones_contours_path):
 		self.cart = defaultdict(int)
 		self._tracks = {}
-		self._max_delay = 30
+		self._max_delay = 100
 		self._interact_length = 15
 		self._cam_id = cam_id
 		
@@ -166,7 +167,7 @@ class SideCam:
 
 		zone, max_intersection = max(intersect_dict.items(), key=lambda x: x[1])
 
-		if 0.9 > max_intersection > 0.15:
+		if 0.9 > max_intersection > 0.01:
 			product._active_zone = zone
 		else:
 			product._active_zone = None
@@ -191,7 +192,7 @@ class SideCam:
 			# product, _ = value
 			product._delay += 1 # update delay
 
-			if product._delay > self._max_delay and (len(product.hist) > 9 or product._is_added):
+			if product._delay > self._max_delay and (len(product.hist) > 1 or product._is_added):
 				actions = self.perform_inference(logger, key, product.class_id, cv_activities, cv_pick_cam, cv_ret_cam, type = "remove", idle = idle)
 				if actions:
 					res_actions.append(actions)
@@ -218,30 +219,33 @@ class SideCam:
 		product = self._tracks[obj_id]
 		#print(product.is_added, obj_id, product._min_cent)
 		#print(len(product._prod_hist))
-		if len(product._prod_hist) < 3 or product._min_cent > 240:
+		if len(product._prod_hist) < 2 or product._min_cent > 10000:
 			return
 			
 		movement_vector = calculate_average_movement_vector(product._prod_hist)
 		angle = calculate_angle(movement_vector[0])
-		#print(type, angle, np.dot(movement_vector, np.array([-1, 0])))
-		
-		if type == 'add':
-			if abs(angle) < 105:
-				action = 'PICK'
-			else:
-				action = 'RETURN'
-		elif type == 'remove':
-			if abs(angle) > 90:
-				action = 'RETURN'
-			else:
-				action = 'PICK'
-		
+
+		#calculate magnitude of movement along the x-axis
+		magnitude_movement_x_axis = abs(movement_vector[0,0])
+		if False:#magnitude_movement_x_axis / cfg.archive_size < .002: #optimal threshold depends on image size, so we divide by image size
+			action = 'NO ACTION'
 		else:
-			if np.dot(movement_vector, np.array([-1, 0])) > 0:
-				action = 'RETURN'
+			if type == 'add':
+				if abs(angle) < 105:
+					action = 'PICK'
+				else:
+					action = 'RETURN'
+			elif type == 'remove':
+				if abs(angle) > 90:
+					action = 'RETURN'
+				else:
+					action = 'PICK'
+			
 			else:
-				action = 'PICK'
-		
+				if np.dot(movement_vector, np.array([-1, 0])) > 0:
+					action = 'RETURN'
+				else:
+					action = 'PICK'		
 		
 		if action == 'PICK' and type == 'remove':
 			action = 'NO ACTION'
@@ -267,7 +271,7 @@ class SideCam:
 			product._last_hand_idxs = []
 			product._last_hand_before_hist = []
 		if action != 'NO ACTION' and not idle:
-			logger.info('      {} - {} {} / {}'.format(self._cam_id, action, int(class_id), cls_dict[class_id]))
+			print('      {} - {} {} / {}'.format(self._cam_id, action, int(class_id), cls_dict[class_id]))
 			cv_activities.append({"class_id":int(class_id), "action":action, "timestamp": time.strftime(timestamp_format)})
 			if action == 'PICK':
 				self.cart[int(class_id)] += 1

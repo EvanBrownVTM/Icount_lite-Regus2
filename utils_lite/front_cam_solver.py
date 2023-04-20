@@ -137,7 +137,7 @@ class FrontCam:
 	def __init__(self, cam_id, zones_contours_path):
 		self.cart = defaultdict(int)
 		self._tracks = {}
-		self._max_delay = 30
+		self._max_delay = 100
 		self._interact_length = 15
 		self._cam_id = cam_id
 		
@@ -161,7 +161,7 @@ class FrontCam:
 
 		zone, max_intersection = max(intersect_dict.items(), key=lambda x: x[1])
 
-		if max_intersection > 0.15:
+		if max_intersection > 0.01:
 			product._active_zone = zone
 		else:
 			product._active_zone = None
@@ -186,7 +186,7 @@ class FrontCam:
 			# product, _ = value
 			product._delay += 1 # update delay
 
-			if product._delay > self._max_delay and (len(product.hist) > 9 or product._is_added):
+			if product._delay > self._max_delay and (len(product.hist) > 1 or product._is_added):
 				actions = self.perform_inference(logger, key, product.class_id, cv_activities, cv_pick_cam, cv_ret_cam, type = "remove", idle = idle)
 				if actions:
 					res_actions.append(actions)
@@ -213,7 +213,7 @@ class FrontCam:
 		product = self._tracks[obj_id]
 		#print(product.is_added, obj_id, product._min_cent)
 		#print(len(product._prod_hist))
-		if len(product._prod_hist) < 3 or product._min_cent > 240:
+		if len(product._prod_hist) < 2 or product._min_cent > 100000:
 			return
 			
 		movement_vector = calculate_average_movement_vector(product._prod_hist)
@@ -247,8 +247,8 @@ class FrontCam:
 			product._last_hand_idxs = []
 			product._last_hand_before_hist = []
 		if action != 'NO ACTION' and not idle:
-			#logger.info('      {} - {} - {} {}'.format(self._cam_id, product._active_zone, action, int(class_id))) #removing action for better tracking
-			logger.info('      {} - {} {} / {}'.format(self._cam_id, action, int(class_id), cls_dict[class_id]))
+			#print('      {} - {} - {} {}'.format(self._cam_id, product._active_zone, action, int(class_id))) #removing action for better tracking
+			print('      {} - {} {} / {}'.format(self._cam_id, action, int(class_id), cls_dict[class_id]))
 			cv_activities.append({"class_id":int(class_id), "action":action, "timestamp": time.strftime(timestamp_format), "active_zone": product._active_zone})
 			if action == 'PICK':
 				self.cart[int(class_id)] += 1

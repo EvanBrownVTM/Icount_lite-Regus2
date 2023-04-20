@@ -47,8 +47,8 @@ logging.getLogger("tensorflow").setLevel(logging.ERROR)
 logging.basicConfig(filename='{}logs/Icount.log'.format(cfg.log_path), level=logging.DEBUG, format="%(asctime)-8s %(levelname)-8s %(message)s")
 logging.disable(logging.DEBUG)
 logger=logging.getLogger()
-logger.info("")
-sys.stderr.write=logger.error
+print("")
+# sys.stderr.write=logger.error
 
 #Setting
 archive_flag = cfg.archive_flag
@@ -68,23 +68,23 @@ fps = 0.0
 conf_th = 0.7
 
 def init():
-	logger.info('Loading TensoRT model...')
+	print('Loading TensoRT model...')
 	# build the class (index/name) dictionary from labelmap file
 	trt_yolo = TrtYOLO("yolov4-tiny-416", (416, 416), 4, False, path_folder = 'yolo/')
 
 	#print('\tRunning warmup detection')
 	dummy_img = np.zeros((416, 416, 3), dtype=np.uint8)
 	_, _, _ = trt_yolo.detect(dummy_img, 0.6)
-	logger.info('Model loaded and ready for detection')
+	print('Model loaded and ready for detection')
 
 	return trt_yolo
 
 def sms_text(tsv_url, post_time):
 	sms_response = requests.post(url= tsv_url, data='["CreateSMSText", "CV FRAUD ALERT: ({}): Transaction time threshold exceeded / {}sec {}"]'.format(cfg.machine_location, post_time, datetime.now().strftime("%c"))).json()
 	if sms_response['resultCode'] == "SUCCESS":
-		logger.info("   CV sms alert succesfully sent")
+		print("   CV sms alert succesfully sent")
 	else:
-		logger.info("   CV sms alert: Failed")
+		print("   CV sms alert: Failed")
 
 def initializeCamera(serial_number_list):
 	cameras = None
@@ -92,12 +92,12 @@ def initializeCamera(serial_number_list):
 	curr_time = time.localtime()
 	if curr_time.tm_hour >= 16 or curr_time.tm_hour < 6:
 		#Night mode
-		logger.info("Operating mode: Night")
+		print("Operating mode: Night")
 		pfs_list = ['pfs/regus_cam0.pfs', 'pfs/regus_cam1.pfs', 'pfs/regus_cam2.pfs']
 		#pfs_list = ['ic_out_front_day.pfs', 'ic_side_cam2_day.pfs', 'ic_side_cam2_day.pfs']
 	else:
 		#Morning mode
-		logger.info("Operating mode: Day")
+		print("Operating mode: Day")
 		pfs_list = ['pfs/regus_cam0.pfs', 'pfs/regus_cam1.pfs', 'pfs/regus_cam2.pfs']
 		#pfs_list = ['ic_out_front_night.pfs', 'ic_side_cam2_night.pfs', 'ic_side_cam2_night.pfs']
 	tlFactory = pylon.TlFactory.GetInstance()
@@ -118,16 +118,16 @@ def initializeCamera(serial_number_list):
 			cam.Attach(tlFactory.CreateDevice(info))
 			cam.Open()
 			pylon.FeaturePersistence.Load(pfs_list[i], cam.GetNodeMap(), True)
-			logger.info("   CAM {}: checked in".format(i))
+			print("   CAM {}: checked in".format(i))
 		except:
-			logger.info("   CAM {}: Not available or disconnected.".format(i))	
+			print("   CAM {}: Not available or disconnected.".format(i))	
 
 	return cameras, len(devices)
 
 #RabbitMQ Initialization
 def initializeChannel():
 	#Initialize queue for door signal
-	credentials = pika.PlainCredentials('nano','nano')
+	credentials = pika.PlainCredentials('guest','guest')
 	parameters = pika.ConnectionParameters('localhost', 5672, '/', credentials, blocked_connection_timeout=3000)
 	connection = pika.BlockingConnection(parameters)
 	channel = connection.channel()
@@ -139,7 +139,7 @@ def initializeChannel():
 	channel.queue_purge(queue='cvIcount')
 	channel2.queue_purge(queue='cvPost')
 
-	logger.info("Rabbitmq connections initialized ")
+	print("Rabbitmq connections initialized ")
 	return channel, channel2, connection
 
 
@@ -358,12 +358,12 @@ def fuse_cam12_activities(cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2, 
 	if len(act_picks12) > 0:
 		for act_pick in act_picks12:
 			cv_activities_fused.append({'class_id': act_pick[0], 'action': act_pick[1], 'timestamp': act_pick[2]})
-			logger.info("   fused action: {} {} @ {}".format(act_pick[1], act_pick[0], act_pick[2]))
+			print("   fused action: {} {} @ {}".format(act_pick[1], act_pick[0], act_pick[2]))
 
 	if len(act_returns12) > 0:
 		for act_return in act_returns12:
 			cv_activities_fused.append({'class_id': act_return[0], 'action': act_return[1], 'timestamp': act_return[2]})
-			logger.info("   fused action: {} {} @ {}".format(act_return[1], act_return[0], act_return[2]))
+			print("   fused action: {} {} @ {}".format(act_return[1], act_return[0], act_return[2]))
 
 	return cv_pick_cam1, cv_ret_cam1, cv_pick_cam2, cv_ret_cam2
 
@@ -374,11 +374,11 @@ def fuse_all_cams_activities(matched_pick_cam01, matched_pick_cam02, matched_ret
 	if len(matched_act_picks012) > 0:
 		for act_pick in matched_act_picks012:
 			cv_activities_fused.append({'class_id': act_pick[0], 'action': act_pick[1], 'timestamp': act_pick[2]})
-			logger.info("   fused action: {} {} @ {}".format(act_pick[1], act_pick[0], act_pick[2]))
+			print("   fused action: {} {} @ {}".format(act_pick[1], act_pick[0], act_pick[2]))
 	if len(matched_act_returns012) > 0:
 		for act_return in matched_act_returns012:
 			cv_activities_fused.append({'class_id': act_return[0], 'action': act_return[1], 'timestamp': act_return[2]})
-			logger.info("   fused action: {} {} @ {}".format(act_return[1], act_return[0], act_return[2]))
+			print("   fused action: {} {} @ {}".format(act_return[1], act_return[0], act_return[2]))
 
 	return matched_pick_cam01, matched_pick_cam02, matched_return_cam01, matched_return_cam02
 
@@ -421,6 +421,7 @@ act_flag = 0
 transid = 'trans_init'
 cv_activities = []
 check_list = [ False for i in range(dev_len)]
+serialized = [None for i in range(dev_len)]
 if pika_flag:
 	door_state = 'Init'
 else:
@@ -438,9 +439,9 @@ while True:
 				recv =json.loads(recv)
 				if recv["cmd"] == 'DoorOpened':
 					transid = recv["parm1"].split(":")[0]
-					logger.info("")
-					logger.info("   RECV: {} / cvIcount".format(recv["cmd"]))
-					logger.info("      TRANSID: {}".format(transid))
+					print("")
+					print("   RECV: {} / cvIcount".format(recv["cmd"]))
+					print("      TRANSID: {}".format(transid))
 					door_state = "DoorOpened"
 					duration_time = 0
 					frame_cnt0 = 0
@@ -467,12 +468,12 @@ while True:
 						cameras.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
 						grabbing_status = 1
 						start_time = time.time()
-						logger.info("      Retail mode: Starting record")
+						print("      Retail mode: Starting record")
 
 				elif recv["cmd"] == 'DoorLocked':
 					transid = recv["parm1"]
-					logger.info("      TRANSID: {}".format(transid))
-					logger.info("   RECV: {} / cvIcount".format(recv["cmd"]))
+					print("      TRANSID: {}".format(transid))
+					print("   RECV: {} / cvIcount".format(recv["cmd"]))
 					
 					door_state = "DoorLocked"
 					if grabbing_status == 1:
@@ -480,24 +481,24 @@ while True:
 						grabbing_status = 0
 						stop_time = time.time()
 						duration_time = int(stop_time - start_time)
-						logger.info("   Transaction duration: {}s".format(duration_time))
+						print("   Transaction duration: {}s".format(duration_time))
 						if duration_time >= cfg.thresh_cv_time:
-							logger.info("   Transaction time threshold exceeded")
+							print("   Transaction time threshold exceeded")
 							if cfg.sms_alert:
 								sms_text(tsv_url, duration_time)
-						logger.info("")
+						print("")
 				elif recv["cmd"] == "ActivityID":
 					ls_activities = recv["parm1"]
 					act_flag = 1
 				
-				logger.info("Received pika signal with command:      {}".format(recv["cmd"]))
+				print("Received pika signal with command:      {}".format(recv["cmd"]))
 					
 		if door_state == "DoorOpened":
 			if cameras.IsGrabbing():
 				try:
 					grabResult = cameras.RetrieveResult(10000, pylon.TimeoutHandling_ThrowException)
 				except:
-					logger.info("Camera Disconnected")
+					print("Camera Disconnected")
 					cameras.Close()
 					cameras, dev_len = initializeCamera([cfg.camera_map["cam0"], cfg.camera_map["cam1"], cfg.camera_map["cam2"]])
 					check_list = [ False for i in range(dev_len)]
@@ -600,7 +601,7 @@ while True:
 
 
 		elif door_state == "DoorLocked" and act_flag == 1:
-			#logger.info("DEBUG:DoorLocked and act_flag==1")
+			#print("DEBUG:DoorLocked and act_flag==1")
 			data = {"cmd": "Done", "transid": transid, "timestamp": time.strftime("%Y%m%d-%H_%M_%S"), "cv_activities": cv_activities, "ls_activities": ls_activities}
 			mess = json.dumps(data)
 			channel2.basic_publish(exchange='',
@@ -613,10 +614,10 @@ while True:
 				writer1.close()
 				writer2.close()
 				init_process = True
-			logger.info('CV_activities:')
-			logger.info(cv_activities)
-			logger.info('LS_activities:')
-			logger.info(ls_activities)
+			print('CV_activities:')
+			print(cv_activities)
+			print('LS_activities:')
+			print(ls_activities)
 			if (len(cv_activities) > 0) or (len(ls_activities) > 0): #only send signal to postprocess if we have either a cv_activity or a ls_activity
 				if len(cv_activities) > 0:
 					cv_activities = sorted(cv_activities, key=lambda d: d['timestamp']) 
@@ -626,20 +627,20 @@ while True:
 								routing_key="cvPost",
 								body=mess)
 				if icount_mode:
-					logger.info("Sent cvPost signal (Icount mode)\n")
+					print("Sent cvPost signal (Icount mode)\n")
 				else:
-					logger.info("Sent cvPost signal (Recording-only mode)\n")
+					print("Sent cvPost signal (Recording-only mode)\n")
 			else:
-				logger.info("No cvPost signal sent - no CV or LS activities")
+				print("No cvPost signal sent - no CV or LS activities")
 			door_state = 'initialize'
 			ls_activities = ""
 			act_flag = 0
 			
 	except KeyboardInterrupt as k:
 		connection.close()
-		logger.info("Exiting app\n")
+		print("Exiting app\n")
 		sys.exit()
 
 	except Exception as e:
-		logger.info(traceback.format_exc())
+		print(traceback.format_exc())
 		raise

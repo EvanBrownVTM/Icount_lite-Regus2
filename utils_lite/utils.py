@@ -43,7 +43,7 @@ def bbox_area(bbox, is_xyxy=True) -> float:
         return bbox[2] * bbox[3]  # w * h
         
 def descale_contour(contour, shape):
-    new_contour = contour[::-1] * shape
+    new_contour = contour[::-1] * shape 
     return new_contour.round().astype(np.int)
 
 def get_roi_bbox(image_size, contours_path):

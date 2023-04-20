@@ -48,10 +48,10 @@ def draw(output_contour_path, input_image):
     
 
 if __name__ == '__main__':
-    output_contour_path = 'cam2_Regus_office.npz'
+    output_contour_path = 'cam2_Regus_hallway_02222023.npz'
     input_image_path = 'cam2_Regus_office.jpg'
-    # shelf_names = ['all_shelves'] #cam0
-    # shelf_names = ['top_shelf', 'second_shelf', 'lower_shelves'] #cam1
+    #shelf_names = ['all_shelves'] #cam0
+    #shelf_names = ['top_shelf', 'second_shelf', 'lower_shelves'] #cam1
     shelf_names = ['lower_shelf', 'lowest_shelf'] #cam2
 
     #draw one contour per shelf

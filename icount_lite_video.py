@@ -26,6 +26,7 @@ import json
 import pycuda.autoinit  # This is needed for initializing CUDA driver
 import configSrc as cfg
 import tensorflow as tf
+tf.enable_eager_execution()
 from PIL import Image
 import requests
 import traceback
@@ -44,14 +45,15 @@ from datetime import datetime
 from scipy.optimize import linear_sum_assignment
 
 
-logging.getLogger("pika").setLevel(logging.WARNING)
-logging.getLogger('requests').setLevel(logging.WARNING)
-logging.getLogger("tensorflow").setLevel(logging.ERROR)
-logging.basicConfig(filename='{}logs/Icount.log'.format(cfg.log_path), level=logging.DEBUG, format="%(asctime)-8s %(levelname)-8s %(message)s")
-logging.disable(logging.DEBUG)
-logger=logging.getLogger()
-print("")
-sys.stderr.write=logger.error
+# logging.getLogger("pika").setLevel(logging.WARNING)
+# logging.getLogger('requests').setLevel(logging.WARNING)
+# logging.getLogger("tensorflow").setLevel(logging.ERROR)
+# logging.basicConfig(filename='{}logs/Icount.log'.format(cfg.log_path), level=logging.DEBUG, format="%(asctime)-8s %(levelname)-8s %(message)s")
+# logging.disable(logging.DEBUG)
+# logger=logging.getLogger()
+# print("")
+# sys.stderr.write=logger.error
+logger = None
 
 #Setting
 maxCamerasToUse = cfg.maxCamerasToUse
@@ -96,7 +98,7 @@ def readSingleTFRecord(n_cam, archive_size):
 	dataset = dataset.map(parse)
 	iterator = iter(dataset)
 	frame_cnt = 0
-	while True and frame_cnt < 100: #TEMPORARY and frame_cnt < 100
+	while False:#TEMPORARY and frame_cnt < 100
 		try:
 			next_element = iterator.get_next()
 			img = next_element['image'].numpy()
@@ -126,7 +128,7 @@ def sort_fxn(x):
 def getFrames(camera_dirs):
 	frames_list = []
 	for camera_dir in camera_dirs:
-		image_list = os.listdir(camera_dirs[0])
+		image_list = os.listdir(camera_dir)
 		image_list = [f for f in image_list if f.endswith('.jpg')]
 		image_list.sort(key=sort_fxn)
 		image_list = [Image.open(os.path.join(camera_dir,f)) for f in image_list]
@@ -424,7 +426,7 @@ def img2jpeg(image):
 	byte_im = im_buf_arr.tobytes()
 	return byte_im
 
-_, channel2, connection = initializeChannel()
+# _, channel2, connection = initializeChannel()
 
 #intialize variables
 tic = time.time()
@@ -491,7 +493,7 @@ def main(transid):
 	tic = time.time()
 	fps = 0.0
 	fourcc = cv2.VideoWriter_fourcc(*'XVID')
-	out = cv2.VideoWriter('videos/' + model_name + '_' + transid + '.avi', fourcc, 20.0, (416*3,416))
+	out = cv2.VideoWriter('videos/' + model_name + '_' + transid + '.avi', fourcc, 20.0, (416*3,416*2))
 
 	#************Run model on video************
 	print('Running detections on stored video')
@@ -548,19 +550,42 @@ def main(transid):
 			#matched_pick_cam01, matched_pick_cam02, matched_return_cam01, matched_return_cam02 = fuse_all_cams_activities(matched_pick_cam01, matched_pick_cam02, matched_return_cam01, matched_return_cam02, cv_activities)
 
 			if display_mode:
+				#plot contours
 				if show_contours:
 						for img, contours in zip([det_frame0, det_frame1, det_frame2], [contours0, contours1, contours2]):
 							draw_contours(img, contours, archive_size)
+				
+				#plot cv_activities by cam
+				def plot_cv_activities_by_cam(frame, cv_activities_camx):
+					for idx, activity in enumerate(cv_activities_camx):
+						cv2.putText(frame, "{}:{}".format(cls_dict[activity['class_id']], activity['action']), (0,15+ 15 * idx), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
+				info_frames = [np.zeros_like(frame) for frame in [det_frame0, det_frame1, det_frame2]]
+				for frame, cv_activities_camx in zip(info_frames, [cv_activities_cam0, cv_activities_cam1, cv_activities_cam2]):
+					plot_cv_activities_by_cam(frame, cv_activities_camx)
+
+				#combine frames
 				img_hstack = det_frame0
 				img_hstack = np.hstack((img_hstack, det_frame1))
 				img_hstack = np.hstack((img_hstack, det_frame2))
 				img_hstack = show_fps(img_hstack, fps)
+
+				#show cart
 				displayCart(img_hstack, cart)
 				img_hstack = cv2.cvtColor(img_hstack, cv2.COLOR_BGR2RGB)
-				out.write(img_hstack)
-				cv2.imshow('Yo', img_hstack)
+
+				#stack info_frames and det_frames
+				info_frames = np.hstack(info_frames)
+				to_display = np.vstack([img_hstack, info_frames])
+
+				#display combined frames in window
+				cv2.imshow('Detections', to_display)
+
+				#write video
+				out.write(to_display)
+
+				#quit if ESC pressed
 				key = cv2.waitKey(1)
-				if key == 27:  # ESC key: quit program
+				if key == 27:  # ESC key
 					break
 
 			toc = time.time()
@@ -573,9 +598,9 @@ def main(transid):
 	#************Upload detections***********
 	data = {"cmd": "Done", "transid": transid, "timestamp": time.strftime("%Y%m%d-%H_%M_%S"), "cv_activities": cv_activities, "ls_activities": ls_activities}
 	mess = json.dumps(data)
-	channel2.basic_publish(exchange='',
-				routing_key="cvPost",
-				body=mess)
+	# channel2.basic_publish(exchange='',
+	# 			routing_key="cvPost",
+	# 			body=mess)
 
 	print('CV_activities:')
 	print(cv_activities)
@@ -586,9 +611,9 @@ def main(transid):
 			cv_activities = sorted(cv_activities, key=lambda d: d['timestamp']) 
 		data = {"cmd": "Done", "transid": transid, "timestamp": time.strftime("%Y%m%d-%H_%M_%S"), "cv_activities": cv_activities, "ls_activities": ls_activities}
 		mess = json.dumps(data)
-		channel2.basic_publish(exchange='',
-						routing_key="cvPost",
-						body=mess)
+		# channel2.basic_publish(exchange='',
+		# 				routing_key="cvPost",
+		# 				body=mess)
 		print("Sent cvPost signal (Stored video mode)\n")
 	else:
 		print("No cvPost signal sent - no CV or LS activities")
